@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ; this file should contain all linux specific extension
 ; functions that are "self contained" ie, do not need anything of the
@@ -10,101 +10,7 @@
 ;
 
 CompilerIf #CompileLinux
-  
-  Structure _GtkAllocation Extends GtkAllocation: EndStructure
-  Structure _GtkWidget Extends GtkWidget: EndStructure
-  Structure _GtkWindow Extends GtkWindow: EndStructure
-  Structure _GtkCombo Extends GtkCombo: EndStructure
-  Structure _GtkBin Extends GtkBin: EndStructure
-  Structure _GtkEditable Extends GtkEditable: EndStructure
-  Structure _GtkText Extends GtkText: EndStructure
-  Structure _GtkStyle Extends GtkStyle: EndStructure
-  Structure _GtkAdjustment Extends GtkAdjustment: EndStructure
-  
-  Structure _GdkEventButton Extends GdkEventButton: EndStructure  ; to solve future gtk2 trouble easily
-  Structure _GdkEventClient Extends GdkEventClient: EndStructure
-  Structure _GdkEventKey Extends GdkEventKey: EndStructure
-  
-  CompilerIf #CompileX64
-    ;CompilerError "check this struct for x64"
-  CompilerEndIf
-  
-  
-  Structure XClientMessageEvent
-    type.l        ; int
-    CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-      alignment1.l
-    CompilerEndIf
-    serial.i      ; unsigned long    /* # of last request processed by server */
-    send_event.l  ; Bool (=int)    /* true if this came from a SendEvent request */
-    CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-      alignment2.l
-    CompilerEndIf
-    *display      ; pointer  /* Display the event was read from */
-    window.i      ; Window (= pointer)
-    message_type.i; Atom (= pointer)
-    format.l      ; int
-    CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-      alignment3.l
-    CompilerEndIf
-    StructureUnion
-      b.b[20]      ; char
-      s.w[10]      ; short
-      l.i[5]       ; long is 64bit on Linux64!
-    EndStructureUnion
-  EndStructure
-  
-  
-  Structure _GdkScreen Extends GdkScreen ; PB def seems to be incomplete
-                                         ;     *font_options;
-                                         ;     resolution.d;      /* pixels/points scale factor for fonts */
-  EndStructure
-  
-  
-  Structure GdkScreenX11
-    parent_instance._GdkScreen;
-    
-    *display
-    *xdisplay
-    *xscreen
-    
-    ; incomplete def!
-  EndStructure
-  
-  Structure GdkDrawableImplX11
-    parent_instance.GdkDrawable
-    *wrapper
-    *colormap
-    
-    xid.l
-    *screen
-    
-    picture.l ;Picture
-    *cairo_surface
-  EndStructure
-  
-  Structure _GdkWindowObject ; PB def is empty!
-    parent_instance.GdkDrawable;
-    *impl.GdkDrawable          ; /* window-system-specific delegate object */
-    *parent
-    user_data.l
-    ; incomplete def!
-  EndStructure
-  
-  ;#define GDK_WINDOW_XDISPLAY(win)      (GDK_SCREEN_X11 (GDK_WINDOW_SCREEN (win))->xdisplay)
-  ;#define GDK_WINDOW_XID(win)           (GDK_DRAWABLE_IMPL_X11(((GdkWindowObject *)win)->impl)->xid)
-  ;#define GDK_WINDOW_SCREEN(win)         (GDK_DRAWABLE_IMPL_X11 (((GdkWindowObject *)win)->impl)->screen)
-  ;#define GDK_SCREEN_X11(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_SCREEN_X11, GdkScreenX11))
-  ;#define GDK_DRAWABLE_IMPL_X11(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_DRAWABLE_IMPL_X11, GdkDrawableImplX11))
-  
-  Procedure XDisplayFromWindowID(*Window.GtkWidget)
-    *gdkwindowobj._GdkWindowObject = *Window\window
-    *impl.GdkDrawableImplX11 = *gdkwindowobj\impl
-    *screen.GdkScreenX11 = *impl\screen
-    ProcedureReturn *screen\xdisplay
-  EndProcedure
-  
-  
+
   ; ---------------------------------------------------
   ; Required XLib stuff:
   ; ---------------------------------------------------
@@ -119,30 +25,42 @@ CompilerIf #CompileLinux
     XGetWMName(display, w, text_prop_return)
   EndImport
   
+  CompilerIf #CompileLinuxGtk
+    ImportC ""
+      gtk_widget_get_window_(window) As "gtk_widget_get_window" ; Gtk 2.14 or newer
+    EndImport
+  CompilerEndIf
+  
+  CompilerIf #CompileLinuxQt
+    ImportC "Build/QtHelpers.a"
+      Qt_ScrollEditorToBottom(*Widget)
+      QT_CenterEditor(*Widget)
+      QT_SelectComboBoxText(*Widget)
+      QT_GetListViewScroll(*Widget)
+      QT_SetListViewScroll(*Widget, Value)
+      QT_WindowBackgroundColor(*Window)
+      QT_GetViewPort(*Widget)
+      QT_SetEventFilter(*Widget, *Handler)
+      QT_SendEvent(*Widget, *Event)
+      QT_EventType(*Event)
+      QT_EventKey(*Event)
+      QT_EventButton(*Event)
+    EndImport
+  CompilerEndIf
+  
   
   #Success = 0
   
-  ; If WindowID != 0 (a result from WindowID()), the current X display from gtk is used
-  ; Else a new X connection is opened just for this command, so this also works if
-  ; no GUI commands are used.
-  ;
-  ; If the program has open windows, it is advised to use one of them here
-  ; to avoid the extra X connection.
-  ;
   ; If there is no window manager that complies to the WM manager hints is present,
   ; the result is an empty string
   ;
-  Procedure.s GetWindowManager(WindowID = 0)
+  Procedure.s GetWindowManager()
     Result$ = ""
     
-    If WindowID
-      xdisplay = XDisplayFromWindowID(WindowID)
-    Else
-      ; uses the default DISPLAY environment variable
-      ; can also be a display string, needs to be ascii though!
-      ;
-      xdisplay = XOpenDisplay(#Null)
-    EndIf
+    ; uses the default DISPLAY environment variable
+    ; can also be a display string, needs to be ascii though!
+    ;
+    xdisplay = XOpenDisplay(#Null)
     
     If xdisplay
       
@@ -179,18 +97,17 @@ CompilerIf #CompileLinux
         XFree(resultdata)
       EndIf
       
-      If WindowID = 0
-        XCloseDisplay(xdisplay) ; if we opened it, close it again!
-      EndIf
+      XCloseDisplay(xdisplay) ; if we opened it, close it again!
     EndIf
     
     ProcedureReturn Result$
   EndProcedure
   
-  
-  Procedure GTKSignalConnect(*Widget, Signal$, Function, user_data)
-    g_signal_connect_data_(*Widget, Signal$, Function, user_data, 0, 0)
-  EndProcedure
+  CompilerIf #CompileLinuxGtk
+    Procedure GTKSignalConnect(*Widget, Signal$, Function, user_data)
+      g_signal_connect_data_(*Widget, Signal$, Function, user_data, 0, 0)
+    EndProcedure
+  CompilerEndIf
   
   
   Procedure ShowWindowMaximized(Window)
@@ -220,21 +137,22 @@ CompilerIf #CompileLinux
   EndProcedure
   
   Procedure SetWindowForeground(Window)
-    
-    *Widget._GtkWidget = WindowID(Window)
-    gdk_window_raise_(*Widget\Window)
+    CompilerIf #CompileLinuxGtk
+      gdk_window_raise_(gtk_widget_get_window_(WindowID(Window)))
+    CompilerElse
+      QtScript("window(" + Window + ").raise()")
+    CompilerEndIf
     SetActiveWindow(Window)
-    
   EndProcedure
   
   ; set window to the foreground without giving it the focus (and without a focus event!)
   Procedure SetWindowForeground_NoActivate(Window)
-    
-    *Widget._GtkWidget = WindowID(Window)
-    gdk_window_raise_(*Widget\Window)
-    
+    CompilerIf #CompileLinuxGtk
+      gdk_window_raise_(gtk_widget_get_window_(WindowID(Window)))
+    CompilerElse
+      QtScript("window(" + Window + ").raise()")
+    CompilerEndIf
   EndProcedure
-  
   
   Procedure SetWindowStayOnTop(Window, StayOnTop)
     StickyWindow(Window, StayOnTop)
@@ -250,25 +168,26 @@ CompilerIf #CompileLinux
   EndProcedure
   
   
-  Procedure GetPanelItemID(Gadget, Item)
-    
-    ProcedureReturn gtk_notebook_get_nth_page_(GadgetID(Gadget), Item)
-    
-  EndProcedure
-  
-  
   Procedure SelectComboBoxText(Gadget)
-    *Entry = gtk_bin_get_child_(GadgetID(Gadget))
-    
-    If *Entry
-      gtk_editable_select_region_(*Entry, 0, -1)
-      gtk_widget_grab_focus_(*Entry)
-    EndIf
+    CompilerIf #CompileLinuxGtk
+      *Entry = gtk_bin_get_child_(GadgetID(Gadget))
+      
+      If *Entry
+        gtk_editable_select_region_(*Entry, 0, -1)
+        gtk_widget_grab_focus_(*Entry)
+      EndIf
+    CompilerElse
+      QT_SelectComboBoxText(GadgetID(Gadget))
+    CompilerEndIf
   EndProcedure
   
   
   Procedure RedrawGadget(Gadget)
-    gtk_widget_queue_draw_(GadgetID(Gadget))
+    CompilerIf #CompileLinuxGtk
+      gtk_widget_queue_draw_(GadgetID(Gadget))
+    CompilerElse
+      QtScript("gadget(" + Gadget + ").update()")
+    CompilerEndIf
   EndProcedure
   
   Procedure GetButtonBackgroundColor()
@@ -294,28 +213,14 @@ CompilerIf #CompileLinux
     Next i
   EndProcedure
   
-  ImportC ""
-    ; This is a varargs function, so do an import which allows us to set 1 value
-    ; Terminator MUST be -1
-    gtk_list_store_set_1(*Store, *Item, Column, *Value, Terminator) As "gtk_list_store_set"
-    gtk_tree_store_set_1(*Store, *Item, Column, *Value, Terminator) As "gtk_tree_store_set"
-  EndImport
-  
-  CompilerIf Defined(PB_Gadget, #PB_Structure) = 0
-    Structure PB_Gadget
-      *Gadget.GtkWidget
-      *Container.GtkWidget
-      *VT
-      UserData.i
-      GadgetData.i[4]
-    EndStructure
+  CompilerIf #CompileLinuxGtk
+    ImportC ""
+      ; This is a varargs function, so do an import which allows us to set 1 value
+      ; Terminator MUST be -1
+      gtk_list_store_set_1(*Store, *Item, Column, *Value, Terminator) As "gtk_list_store_set"
+      gtk_tree_store_set_1(*Store, *Item, Column, *Value, Terminator) As "gtk_tree_store_set"
+    EndImport
   CompilerEndIf
-  
-  Structure PB_TreeCache
-    ItemCount.l
-    ArraySize.l
-    *Cache
-  EndStructure
   
   Global FileManagerExe$
   Global FileManagerParameters$
@@ -343,6 +248,8 @@ CompilerIf #CompileLinux
         AddElement(Managers()): Managers() = "konqueror"
         AddElement(Managers()): Managers() = "krusader"
         AddElement(Managers()): Managers() = "thunar"
+        AddElement(Managers()): Managers() = "nemo"
+        AddElement(Managers()): Managers() = "pcmanfm"
         
       ElseIf FindString(WindowManager$, "KWIN", 1)
         ; KDE
@@ -352,9 +259,22 @@ CompilerIf #CompileLinux
         AddElement(Managers()): Managers() = "nautilus"
         AddElement(Managers()): Managers() = "gnome-commander"
         AddElement(Managers()): Managers() = "thunar"
+        AddElement(Managers()): Managers() = "nemo"
+        AddElement(Managers()): Managers() = "pcmanfm"
         
         ; ElseIf FindString(WindowManager$, "XFWM", 1)
         ; Xfce (use the below fallback for that and others)
+        
+      ElseIf FindString(WindowManager$, "MUTTER", 1)
+        ; Mutter
+        AddElement(Managers()): Managers() = "nemo"
+        AddElement(Managers()): Managers() = "pcmanfm"
+        AddElement(Managers()): Managers() = "nautilus"
+        AddElement(Managers()): Managers() = "gnome-commander"
+        AddElement(Managers()): Managers() = "dolphin"
+        AddElement(Managers()): Managers() = "konqueror"
+        AddElement(Managers()): Managers() = "krusader"
+        AddElement(Managers()): Managers() = "thunar"
         
       Else
         ; fallback
@@ -364,6 +284,8 @@ CompilerIf #CompileLinux
         AddElement(Managers()): Managers() = "krusader"
         AddElement(Managers()): Managers() = "nautilus"
         AddElement(Managers()): Managers() = "gnome-commander"
+        AddElement(Managers()): Managers() = "nemo"
+        AddElement(Managers()): Managers() = "pcmanfm"
         
       EndIf
       
@@ -404,6 +326,14 @@ CompilerIf #CompileLinux
                 FileManagerName$ = "Thunar"
                 FileManagerParameters$ = ""
                 
+              Case "nemo"
+                FileManagerName$ = "Nemo"
+                FileManagerParameters$ = ""
+                
+              Case "pcmanfm"
+                FileManagerName$ = "PcManFM"
+                FileManagerParameters$ = ""
+              
             EndSelect
             
             Break
@@ -432,22 +362,14 @@ CompilerIf #CompileLinux
     EndIf
   EndProcedure
   
+  Procedure ShowExplorerFile(File$)
+    ; For now, just launch the containing folder
+    ShowExplorerDirectory(GetPathPart(File$))
+  EndProcedure
+  
   Procedure ModifierKeyPressed(Key)
-    Select Key
-      Case #PB_Shortcut_Shift:   mod = #GDK_SHIFT_MASK
-      Case #PB_Shortcut_Control: mod = #GDK_CONTROL_MASK
-      Case #PB_Shortcut_Alt:     mod = #GDK_MOD1_MASK
-    EndSelect
-    
-    ; We don't need the pointer, so just use the main window as reference
-    *Window.GtkWidget = WindowID(#WINDOW_Main)
-    gdk_window_get_pointer_(*Window\window, @x, @y, @mask)
-    
-    If mask & mod
-      ProcedureReturn #True
-    Else
-      ProcedureReturn #False
-    EndIf
+    ; Not used on Linux
+    ProcedureReturn 0
   EndProcedure
   
   Procedure OpenWebBrowser(Url$)
@@ -469,6 +391,29 @@ CompilerIf #CompileLinux
       EndIf
     EndIf
     
+  EndProcedure
+  
+  CompilerIf #CompileLinuxGtk
+    ImportC ""
+      gtk_adjustment_get_value.d(*Adjustment)
+      gtk_adjustment_set_value(*Adjustment, Position.d)
+    EndImport
+  CompilerEndIf
+  
+  Procedure GetListViewScroll(Gadget)
+    CompilerIf #CompileLinuxGtk
+      ProcedureReturn gtk_adjustment_get_value(gtk_tree_view_get_vadjustment_(GadgetID(Gadget)))
+    CompilerElse
+      ProcedureReturn QT_GetListViewScroll(GadgetID(Gadget))
+    CompilerEndIf
+  EndProcedure
+  
+  Procedure SetListViewScroll(Gadget, Position)
+    CompilerIf #CompileLinuxGtk
+      gtk_adjustment_set_value(gtk_tree_view_get_vadjustment_(GadgetID(Gadget)), Position)
+    CompilerElse
+      QT_SetListViewScroll(GadgetID(Gadget), Position)
+    CompilerEndIf
   EndProcedure
   
 CompilerEndIf

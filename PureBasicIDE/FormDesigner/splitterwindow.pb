@@ -1,11 +1,12 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software and Gaetan DUPONT-PANON. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 Procedure InitSplitterWin()
+  
   DisableWindow(#WINDOW_Main,1)
-  OpenWindow(#Form_SplitterWin, 0, 0, 412, 142, "", #PB_Window_SystemMenu | #PB_Window_WindowCentered,WindowID(#WINDOW_Main))
+  OpenWindow(#Form_SplitterWin, 0, 0, 412, 142, Language("Form","CreateSplitterTitle"), #PB_Window_SystemMenu | #PB_Window_WindowCentered,WindowID(#WINDOW_Main))
   
   Text_0 = TextGadget(#PB_Any, 20, 20, 110, 22, Language("Form","FirstGadget"), #PB_Text_Right)
   Text_0_1 = TextGadget(#PB_Any, 20, 52, 110, 22, Language("Form","SecondGadget"), #PB_Text_Right)
@@ -17,9 +18,14 @@ Procedure InitSplitterWin()
   i = 0
   ForEach FormWindows()\FormGadgets()
     If FormWindows()\FormGadgets()\splitter = 0
-      AddGadgetItem(#Form_Splitter_1st,i,FormWindows()\FormGadgets()\variable)
+      If FormWindows()\FormGadgets()\pbany
+        ID$ = FormWindows()\FormGadgets()\variable
+      Else
+        ID$ = "#" + FormWindows()\FormGadgets()\variable
+      EndIf
+      AddGadgetItem(#Form_Splitter_1st,i, ID$)
       SetGadgetItemData(#Form_Splitter_1st,i,@FormWindows()\FormGadgets())
-      AddGadgetItem(#Form_Splitter_2nd,i,FormWindows()\FormGadgets()\variable)
+      AddGadgetItem(#Form_Splitter_2nd,i, ID$)
       SetGadgetItemData(#Form_Splitter_2nd,i,@FormWindows()\FormGadgets())
       i + 1
     EndIf
@@ -47,7 +53,7 @@ Procedure EventSplitterWin(gadget, event_type)
       EndIf
       
       If Not d_gadget1 Or Not d_gadget2 Or d_gadget1 = d_gadget2
-        MessageRequester(appname, Language("Form","SelectError"))
+        MessageRequester(#ProductName$, Language("Form","SelectError"))
       Else
         PushListPosition(FormWindows()\FormGadgets())
         ChangeCurrentElement(FormWindows()\FormGadgets(),d_gadget1)
@@ -60,7 +66,7 @@ Procedure EventSplitterWin(gadget, event_type)
         If d_parent1 = d_parent2 And d_parentitem1 = d_parentitem2
           CloseSplitterWin()
         Else
-          MessageRequester(appname, Language("Form","GadgetListError"))
+          MessageRequester(#ProductName$, Language("Form","GadgetListError"))
         EndIf
       EndIf
     Case #Form_Splitter_Cancel

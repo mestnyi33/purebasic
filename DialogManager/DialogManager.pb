@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 XIncludeFile "Common.pb"
 XIncludeFile "Object_Window.pb"
@@ -187,8 +187,8 @@ Procedure OpenDialog(*DataOffset.DialogObjectData, ParentID = 0, *Sizing.DialogP
       
       CompilerIf #CompileWindows
         AdjustWindowRectEx_(@Border.Rect, #WS_TILEDWINDOW, #False, #WS_EX_WINDOWEDGE)
-        x = (GetSystemMetrics_(#SM_CXSCREEN)-Width-(Border\bottom-Border\top)) / 2
-        y = (GetSystemMetrics_(#SM_CYSCREEN)-Height-(Border\right-Border\left)) / 2
+        x = (DesktopUnscaledX(GetSystemMetrics_(#SM_CXSCREEN)-(Border\bottom-Border\top)) - Width) / 2
+        y = (DesktopUnscaledY(GetSystemMetrics_(#SM_CYSCREEN)-(Border\right-Border\left)) - Height) / 2
       CompilerEndIf
     EndIf
     
@@ -199,13 +199,6 @@ Procedure OpenDialog(*DataOffset.DialogObjectData, ParentID = 0, *Sizing.DialogP
     CompilerIf #CompileLinuxGtk2
       If x = #PB_Ignore And y = #PB_Ignore
         gtk_window_set_position_(WindowID(*Window\Window), #GTK_WIN_POS_CENTER_ALWAYS)
-      EndIf
-    CompilerEndIf
-    
-    CompilerIf #CompileMacCarbon
-      If x = #PB_Ignore And y = #PB_Ignore
-        #kWindowCenterOnMainScreen = 1
-        RepositionWindow_(WindowID(*Window\Window), 0, #kWindowCenterOnMainScreen)
       EndIf
     CompilerEndIf
     
@@ -237,12 +230,6 @@ Procedure OpenDialog(*DataOffset.DialogObjectData, ParentID = 0, *Sizing.DialogP
         EndIf
       CompilerEndIf
       
-      CompilerIf #CompileMacCarbon
-        If x = #PB_Ignore And y = #PB_Ignore
-          #kWindowCenterOnMainScreen = 1
-          RepositionWindow_(WindowID(*Window\Window), 0, #kWindowCenterOnMainScreen)
-        EndIf
-      CompilerEndIf
     EndIf
     
     CompilerIf #PB_Compiler_Debugger

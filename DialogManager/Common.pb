@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 ; Define these for easier crossplatform development, also without the IDE
@@ -12,39 +12,43 @@ CompilerIf Defined(CompileWindows, #PB_Constant) = 0
     CompilerCase #PB_OS_Windows
       #CompileWindows   = 1
       #CompileLinux     = 0
-      #CompileLinuxGtk1 = 0
+      #CompileLinuxGtk  = 0
       #CompileLinuxGtk2 = 0
+      #CompileLinuxGtk3 = 0
       #CompileMac       = 0
-      #CompileMacCarbon = 0
       #CompileMacCocoa  = 0
+      #CompileLinuxQt   = 0
       
     CompilerCase #PB_OS_Linux
       #CompileWindows   = 0
       #CompileLinux     = 1
-      CompilerIf Subsystem("Gtk1")
-        #CompileLinuxGtk1 = 1
-        #CompileLinuxGtk2 = 0
-      CompilerElse
-        #CompileLinuxGtk1 = 0
+      CompilerIf Subsystem("Gtk2")
+        #CompileLinuxGtk  = 1
         #CompileLinuxGtk2 = 1
+        #CompileLinuxGtk3 = 0
+        #CompileLinuxQt   = 0
+      CompilerElseIf Subsystem("Qt")
+        #CompileLinuxGtk  = 0
+        #CompileLinuxGtk2 = 0
+        #CompileLinuxGtk3 = 0
+        #CompileLinuxQt   = 1
+      CompilerElse
+        #CompileLinuxGtk  = 1
+        #CompileLinuxGtk2 = 0
+        #CompileLinuxGtk3 = 1
+        #CompileLinuxQt   = 0
       CompilerEndIf
       #CompileMac       = 0
-      #CompileMacCarbon = 0
       #CompileMacCocoa  = 0
       
     CompilerCase #PB_OS_MacOS
       #CompileWindows   = 0
       #CompileLinux     = 0
-      #CompileLinuxGtk1 = 0
+      #CompileLinuxGtk  = 0
       #CompileLinuxGtk2 = 0
+      #CompileLinuxGtk3 = 0
       #CompileMac       = 1
-      CompilerIf Subsystem("carbon")
-        #CompileMacCocoa  = 0
-        #CompileMacCarbon = 1
-      CompilerElse
-        #CompileMacCocoa  = 1
-        #CompileMacCarbon = 0
-      CompilerEndIf
+      #CompileMacCocoa  = 1
       
   CompilerEndSelect
 CompilerEndIf

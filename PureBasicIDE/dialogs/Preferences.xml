@@ -5,7 +5,7 @@
 <window label="Dialog_Preferences" id="#WINDOW_Preferences" lang="Preferences:Title" invisible="yes" height="510">
   <vbox spacing="10" expand="item:1">
     <hbox spacing="10">
-      <tree id="#GADGET_Preferences_Tree" width="#DEFAULT_PreferencesTreeWidth">
+      <tree id="#GADGET_Preferences_Tree" width="#DEFAULT_PreferencesTreeWidth" flags="#PB_Tree_AlwaysShowSelection">
         <item sublevel="0" lang="Preferences:General" />
         <item sublevel="1" lang="Preferences:Language" />
         <item sublevel="1" lang="Shortcuts:Shortcuts" />
@@ -48,7 +48,11 @@
                   <checkbox id="#GADGET_Preferences_NoSplashScreen"       lang="Preferences:NoSplashScreen" />
                   <checkbox id="#GADGET_Preferences_MemorizeWindow"       lang="Preferences:MemorizeWindow" />
                   <checkbox id="#GADGET_Preferences_AutoReload"           lang="Preferences:AutoReload" />
-                  <checkbox id="#GADGET_Preferences_DisplayFullPath"      lang="Preferences:DisplayFullPath" />                
+                  <checkbox id="#GADGET_Preferences_DisplayFullPath"      lang="Preferences:DisplayFullPath" />
+                  <checkbox id="#GADGET_Preferences_EnableAccessibility"  lang="Preferences:EnableAccessibility" />
+                  <compiler if="#CompileMac">
+                    <checkbox id="#GADGET_Preferences_DisplayDarkMode"      lang="Preferences:DisplayDarkMode" />                
+                  </compiler>
                 </vbox>
 
                 <gridbox colspacing="10" colexpand="item:2">
@@ -62,16 +66,6 @@
                     <string id="#GADGET_Preferences_FindHistorySize" flags="#PB_String_Numeric"  width="80" />
                   </singlebox>
                 </gridbox>
-                  
-                <compiler if="#CompileMacCarbon">
-                  <gridbox colspacing="10" colexpand="item:2">
-                    <text text="ToolsPanel Size: " />
-                    <scrollbar name="Mac_ToolsPanelSize" min="30" max="100" page="10" height="20" />
-                    <text text="Errorlog Size: " />
-                    <scrollbar name="Mac_ErrorLogSize" min="30" max="100" page="10" height="20" />
-                  </gridbox>
-                </compiler>
-    
               </vbox>
             </frame>
 
@@ -110,7 +104,7 @@
         <container margin="0" invisible="yes" id="#GADGET_Preferences_FirstContainer+2">
           <frame lang="Shortcuts:Shortcuts" margin="5">
             <vbox expand="item:1" spacing="10">
-              <listicon id="#GADGET_Preferences_ShortcutList" flags="#PB_ListIcon_FullRowSelect">
+              <listicon id="#GADGET_Preferences_ShortcutList" flags="#PB_ListIcon_FullRowSelect|#PB_ListIcon_AlwaysShowSelection">
                 <column width="200" lang="Shortcuts:Action" />
                 <column width="90" lang="Shortcuts:Shortcut" />
               </listicon>
@@ -163,7 +157,6 @@
                     <combobox id="#GADGET_Preferences_ToolbarIconType" width="140">
                       <item lang="Preferences:Separator" />
                       <item lang="Preferences:Space" />
-                      <item lang="Preferences:StandardButton" />
                       <item lang="Preferences:ThemeIcon" />
                       <item lang="Preferences:ExternalIcon" />
                     </combobox>
@@ -282,11 +275,7 @@
               -->
               <checkbox id="#GADGET_Preferences_EnableBolding" lang="Preferences:EnableBolding" />
               <checkbox id="#GADGET_Preferences_EnableCaseCorrection" lang="Preferences:EnableCase" />
-              <compiler if="#CompileMacCarbon"> <!-- disabled on OSX due to flickering -->                    
-                <checkbox id="#GADGET_Preferences_EnableBraceMatch"   disabled="yes" lang="Preferences:EnableBraceMatch" />                    
-              <compilerelse/>
-                <checkbox id="#GADGET_Preferences_EnableBraceMatch" lang="Preferences:EnableBraceMatch" />
-              </compiler>
+              <checkbox id="#GADGET_Preferences_EnableBraceMatch" lang="Preferences:EnableBraceMatch" />
               <checkbox id="#GADGET_Preferences_EnableKeywordMatch" lang="Preferences:EnableKeywordMatch" />
               <checkbox id="#GADGET_Preferences_EnableLineNumbers" lang="Preferences:EnableLineNumbers" />
               <!-- removed 
@@ -351,7 +340,6 @@
               <hbox expand="item:2">
                 <text lang="Preferences:DefaultColors" text=": " />
                 <combobox id="#GADGET_Preferences_ColorSchemes" />
-                <button id="#GADGET_Preferences_ColorSchemeSet" lang="Preferences:Set" width="60" height="ignore" />
               </hbox>
             </vbox>
           </frame>
@@ -427,6 +415,7 @@
                   <vbox expand="no" align="top">
                     <checkbox id="#GADGET_Preferences_ShowIndentGuides" lang="Preferences:ShowIndentGuides" />
                     <checkbox id="#GADGET_Preferences_ShowWhiteSpace" lang="Preferences:ShowWhiteSpace" />
+                    <checkbox id="#GADGET_Preferences_UseTabIndentForSplittedLines" lang="Preferences:UseTabIndentForSplittedLines" />
 
                     <!-- currently not implemented! -->
                     <checkbox id="#GADGET_Preferences_BackspaceUnindent" lang="Preferences:BackspaceUnindent" invisible="yes"/>
@@ -462,11 +451,11 @@
             <vbox spacing="10">
 
               <vbox spacing="0">
-                <option id="#GADGET_Preferences_CharMatch1" lang="Preferences:DisplayFullList" />
-                <option id="#GADGET_Preferences_CharMatch2" lang="Preferences:FirstCharMatch" />
-                <option id="#GADGET_Preferences_CharMatch3" lang="Preferences:AllWordMatch" />
+                <checkbox id="#GADGET_Preferences_AddBrackets"    lang="Preferences:AddBrackets" />
+                <checkbox id="#GADGET_Preferences_AddSpaces"      lang="Preferences:AddSpaces" />
+                <checkbox id="#GADGET_Preferences_AddEndKeywords" lang="Preferences:AddEndKeywords" />
               </vbox>
-
+              
               <gridbox colexpand="item:2">
                 <text lang="Preferences:BoxWidth" text=": " />
                 <singlebox expand="no" margin="0">
@@ -478,13 +467,6 @@
                   <string id="#GADGET_Preferences_BoxHeight" width="100"/>
                 </singlebox>
               </gridbox>
-
-
-              <vbox spacing="0">
-                <checkbox id="#GADGET_Preferences_AddBrackets"    lang="Preferences:AddBrackets" />
-                <checkbox id="#GADGET_Preferences_AddSpaces"      lang="Preferences:AddSpaces" />
-                <checkbox id="#GADGET_Preferences_AddEndKeywords" lang="Preferences:AddEndKeywords" />
-              </vbox>
 
               <vbox spacing="0">
                 <checkbox id="#GADGET_Preferences_StructureItems" lang="Preferences:AutoPopupStructures" />
@@ -717,25 +699,30 @@
                   <checkbox id="#GADGET_Preferences_InlineASM"  lang="Compiler:EnableASM" />
                   <checkbox id="#GADGET_Preferences_OnError"    lang="Compiler:EnableOnError" />
                   
-                  <checkbox id="#GADGET_Preferences_Thread"     lang="Compiler:EnableThread"  colspan="2" />
+                  <checkbox id="#GADGET_Preferences_Thread"     lang="Compiler:EnableThread" />
+                  <checkbox id="#GADGET_Preferences_Optimizer"  lang="Compiler:Optimizer" />
   
-                  <checkbox id="#GADGET_Preferences_XPSkin"     lang="Compiler:EnableXP" colspan="2"/>
-                  
-                  <checkbox id="#GADGET_Preferences_VistaAdmin" lang="Compiler:EnableAdmin" colspan="2" />
-  
-                  <checkbox id="#GADGET_Preferences_VistaUser"  lang="Compiler:EnableUser" colspan="2" />
-                  
                   <checkbox id="#GADGET_Preferences_DPIAware"   lang="Compiler:DPIAware" colspan="2"/>
   
+                  <checkbox id="#GADGET_Preferences_XPSkin"     lang="Compiler:EnableXP" colspan="2"/>
+                  <checkbox id="#GADGET_Preferences_VistaAdmin" lang="Compiler:EnableAdmin" colspan="2" />
+                  <checkbox id="#GADGET_Preferences_VistaUser"  lang="Compiler:EnableUser" colspan="2" />
+                  <checkbox id="#GADGET_Preferences_DllProtection" lang="Compiler:DllProtection" colspan="2"/>
+                  <checkbox id="#GADGET_Preferences_SharedUCRT" lang="Compiler:SharedUCRT" colspan="2"/>
+                  <checkbox id="#GADGET_Preferences_Wayland" lang="Compiler:EnableWayland" colspan="2" />
+
                   <checkbox id="#GADGET_Preferences_TemporaryExe" lang="Compiler:TemporaryExe" colspan="2" />
                   
                 </compiler>
               </gridbox>
 
               <gridbox colspacing="10" colexpand="item:2">
+                <checkbox id="#GADGET_Preferences_CustomCompiler" lang="Compiler:UseCompiler" text=": " />
+                <combobox id="#GADGET_Preferences_SelectCustomCompiler" />
+              
                 <text lang="Preferences:SubSystem" text=": " />
                 <string id="#GADGET_Preferences_SubSystem" />
-
+                
                 <compiler if="#SpiderBasic">
                   <!-- nothing -->
                 <compilerelse/>
@@ -795,9 +782,7 @@
             <hbox expand="equal">
               <frame lang="Preferences:DebuggerMode" margin="5">
                 <combobox id="#GADGET_Preferences_DebuggerMode">
-                  <!-- <compiler if="#CompileMac = 0"> --> <!-- Not supported on mac yet OSX-debug --> 
-                    <item lang="Preferences:IDEDebugger" />
-                  <!-- </compiler> -->
+                  <item lang="Preferences:IDEDebugger" />
                   <item lang="Preferences:GUIDebugger" />
                   <item lang="Preferences:ConsoleDebugger" />
                 </combobox>
@@ -901,36 +886,58 @@
           </frame>
         </container>
 
-          <!-- Form -->
-          <container margin="0" expand="horizontal" invisible="yes" id="#GADGET_Preferences_FirstContainer+20">
-              <frame lang="Preferences:Form" margin="5">
-                  <vbox spacing="20">
-                      <vbox>
-                          <checkbox id="#GADGET_Preferences_FormVariable"              lang="Preferences:FormVariable" />
-                          <checkbox id="#GADGET_Preferences_FormVariableCaption"       lang="Preferences:FormVariableCaption" />
-                          <checkbox id="#GADGET_Preferences_FormGrid"       lang="Preferences:FormGrid" />
-                          <checkbox id="#GADGET_Preferences_FormEventProcedure"     lang="Preferences:FormEventProcedure" />
-                      </vbox>
-                      
-                      <gridbox colspacing="10" colexpand="item:2">
-                          <text lang="Preferences:FormGridSize" text=": " />
-                          <singlebox expand="no" margin="0">
-                              <string id="#GADGET_Preferences_FormGridSize" flags="#PB_String_Numeric" width="80" />
-                          </singlebox>
+        <!-- Form -->
+        <container margin="0" expand="horizontal" invisible="yes" id="#GADGET_Preferences_FirstContainer+20">
+          <vbox>
+            <frame lang="Preferences:Form" margin="5">
+              <vbox spacing="20">
+                <vbox>
+                  <checkbox id="#GADGET_Preferences_FormVariable"              lang="Preferences:FormVariable" />
+                  <checkbox id="#GADGET_Preferences_FormVariableCaption"       lang="Preferences:FormVariableCaption" />
+                  <checkbox id="#GADGET_Preferences_FormGrid"       lang="Preferences:FormGrid" />
+                  <checkbox id="#GADGET_Preferences_FormEventProcedure"     lang="Preferences:FormEventProcedure" />
+                </vbox>
+                
+                <gridbox colspacing="10" colexpand="item:2">
+                  <text lang="Preferences:FormGridSize" text=": " />
+                  <singlebox expand="no" margin="0">
+                    <string id="#GADGET_Preferences_FormGridSize" flags="#PB_String_Numeric" width="80" />
+                  </singlebox>
 
-                          <text lang="Preferences:FormSkin" text=": " />
-                          <combobox id="#GADGET_Preferences_FormSkin">
-                              <item text="OS X" />
-                              <item text="Windows 7" />
-                              <item text="Windows 8" />
-                              <item text="Linux Ubuntu" />
-                          </combobox>
-
-                      </gridbox>
-
-                  </vbox>
-              </frame>
-          </container>
+                  <text lang="Preferences:FormSkin" text=": " />
+                  <combobox id="#GADGET_Preferences_FormSkin">
+                    <item text="OS X" />
+                    <item text="Windows 7" />
+                    <item text="Windows 8" />
+                    <item text="Linux Ubuntu" />
+                  </combobox>
+                </gridbox>
+              </vbox>
+            </frame>
+            <frame lang="Preferences:FormWarnings" margin="5">
+              <vbox spacing="20">
+                <gridbox colspacing="10" colexpand="item:2">
+                  <text lang="Preferences:WarnNotRecognized" text=": " />
+                  <combobox id="#GADGET_Preferences_FormNotRecognized">
+                    <item lang="Form:Option_Never" />
+                    <item lang="Form:Option_Always" />
+                  </combobox>
+                  <text lang="Preferences:WarnUpgrade" text=": " />
+                  <combobox id="#GADGET_Preferences_FormUpgrade">
+                      <item lang="Form:Option_Never" />
+                      <item lang="Form:Option_Backward" />
+                      <item lang="Form:Option_Always" />
+                  </combobox>
+                  <text lang="Preferences:WarnDowngrade" text=": " />
+                  <combobox id="#GADGET_Preferences_FormDowngrade">
+                      <item lang="Form:Option_Never" />
+                      <item lang="Form:Option_Always" />
+                  </combobox>
+                </gridbox>
+              </vbox>
+            </frame>
+          </vbox>
+        </container>
 
         <!-- Toolspanel -->
         <container margin="0" invisible="yes" id="#GADGET_Preferences_FirstContainer+21">
@@ -1078,5 +1085,7 @@
 
   <shortcut key="#PB_Shortcut_Return" id="#GADGET_Preferences_Ok" />
   <shortcut key="#PB_Shortcut_Escape" id="#GADGET_Preferences_Cancel" />
+  <shortcut key="#PB_Shortcut_PageUp" id="#GADGET_Preferences_PageUp" />
+  <shortcut key="#PB_Shortcut_PageDown" id="#GADGET_Preferences_PageDown" />
 </window>
   

@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software and Gaetan DUPONT-PANON. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 Procedure AddFormInfo(FileName$ = "")
   
   LastElement(FileList())
@@ -63,10 +63,13 @@ Procedure AddFormInfo(FileName$ = "")
   FileList()\FileName$        = FileName$
   FileList()\Debugger         = OptionDebugger  ; set the default values
   FileList()\EnablePurifier   = OptionPurifier
+  FileList()\Optimizer        = OptionOptimizer
   FileList()\EnableASM        = OptionInlineASM
   FileList()\EnableXP         = OptionXPSkin
   FileList()\EnableAdmin      = OptionVistaAdmin
   FileList()\EnableUser       = OptionVistaUser
+  FileList()\DllProtection    = OptionDllProtection
+  FileList()\SharedUCRT       = OptionSharedUCRT
   FileList()\EnableThread     = OptionThread
   FileList()\EnableOnError    = OptionOnError
   FileList()\ExecutableFormat = OptionExeFormat
@@ -79,6 +82,8 @@ Procedure AddFormInfo(FileName$ = "")
   FileList()\UseBuildCount    = OptionUseBuildCount
   FileList()\UseCompileCount  = OptionUseCompileCount
   FileList()\TemporaryExePlace= OptionTemporaryExe
+  FileList()\CustomCompiler   = OptionCustomCompiler
+  FileList()\CompilerVersion$ = OptionCompilerVersion$
   FileList()\CurrentDirectory$= ""
   FileList()\ToggleFolds      = 1
   FileList()\CustomCompiler   = 0
@@ -108,17 +113,8 @@ EndProcedure
 Procedure ResizeFormInfo(Width, Height)
   FD_UpdateScrollbars(1)
   
-  If IsGadget(#GADGET_Form_ScrollV)
-    swidth = Width - Grid_Scrollbar_Width
-  Else
-    swidth = Width
-  EndIf
-  
-  If IsGadget(#GADGET_Form_ScrollH)
-    sheight = Height - Grid_Scrollbar_Width
-  Else
-    sheight = Height
-  EndIf
+  swidth = Width - Grid_Scrollbar_Width
+  sheight = Height - Grid_Scrollbar_Width
   
   If swidth < 1
     swidth = 1
@@ -177,7 +173,7 @@ EndProcedure
 
 ;- FormPanel plugin functions
 
-Procedure FormPanel_CreateFunction(*Entry.ToolsPanelEntry, PanelItemID)
+Procedure FormPanel_CreateFunction(*Entry.ToolsPanelEntry)
   
   PanelGadget(#Form_Prop, 0, 0, 50, 50)
   AddGadgetItem(#Form_Prop, 0, Language("Form", "Toolbox"))
@@ -274,18 +270,13 @@ Procedure FormPanel_CreateFunction(*Entry.ToolsPanelEntry, PanelItemID)
   grid_SetGadgetAttribute(propgrid, #Grid_Caption_Col, 1)
   grid_SetGadgetAttribute(propgrid, #Grid_Disable_Delete, 1)
   
-  CompilerIf #CompileMac
-    grid_SetGadgetColor(propgrid, #Grid_Color_LineLight, GetCocoaColor("systemGrayColor"))
-  CompilerElse
-    grid_SetGadgetColor(propgrid, #Grid_Color_LineLight, RGB(238, 238, 238))
-  CompilerEndIf
-  
   propgrid_combo = grid_CreateComboBox(propgrid)
   propgrid_proccombo = grid_CreateComboBox(propgrid)
   
   grid_SetColumnWidth(propgrid, 0, 20)
   grid_SetColumnWidth(propgrid, 1)
   grid_SetColumnWidth(propgrid, 2, grid_GadgetWidth(propgrid) - grid_GetColumnWidth(propgrid, 0) - grid_GetColumnWidth(propgrid, 1))
+  
   CloseGadgetList() ; Close the container
   
   SplitterGadget(#Form_SplitterInt, 0, 0, 100, 200, #Form_Prop, #Form_GridContainer, #PB_Splitter_FirstFixed)
@@ -486,6 +477,9 @@ Procedure FormPanel_EventHandler(*Entry.ToolsPanelEntry, EventGadgetID)
                     Case #Form_Type_Web
                       var = "WebView_"+Str(FormWindows()\c_web)
                       FormWindows()\c_web + 1
+                    Case #Form_Type_WebView
+                      var = "WebView_"+Str(FormWindows()\c_web)
+                      FormWindows()\c_web + 1
                     Case #Form_Type_Container
                       var = "Container_"+Str(FormWindows()\c_container)
                       FormWindows()\c_container + 1
@@ -647,4 +641,5 @@ CompilerIf Not #SpiderBasic
   AvailablePanelTools()\ToolID$              = "Form"
   AvailablePanelTools()\PanelTitle$          = "FormShort"
   AvailablePanelTools()\ToolName$            = "FormLong"
+  AvailablePanelTools()\PanelTabOrder        = 4
 CompilerEndIf

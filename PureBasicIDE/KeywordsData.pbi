@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ; This file contains the definitions of all the PureBasic/SpiderBasic keywords.
 ; They were originally part of the "HighlightingEngine.pb" source, and were
@@ -65,6 +65,7 @@ DataSection
   CompilerIf #SpiderBasic
     Data$ "DisableJS"     , "", ""
   CompilerEndIf
+  Data$ "DisablePureLibrary", "", ""
 
   Data$ "Else"              , "", ""
   Data$ "ElseIf"            , "", " "
@@ -74,12 +75,13 @@ DataSection
   Data$ "EnableDebugger"    , "", ""
   Data$ "EnableExplicit"    , "", ""
   CompilerIf #SpiderBasic
-    Data$ "EnableJS"        , "", ""
+      Data$ "EnableJS"        , "", ""
   CompilerEndIf
   Data$ "End"               , "", ""
   Data$ "EndDataSection"    , "", ""
   Data$ "EndDeclareModule"  , "", ""
   Data$ "EndEnumeration"    , "", ""
+  Data$ "EndHeaderSection"        , "", ""
   Data$ "EndIf"             , "", ""
   Data$ "EndImport"         , "", ""
   Data$ "EndInterface"      , "", ""
@@ -108,6 +110,8 @@ DataSection
     Data$ "Gosub" , "", " "
     Data$ "Goto"  , "", " "
   CompilerEndIf
+  
+  Data$ "HeaderSection"        , "EndHeaderSection", ""
 
   Data$ "If"            , "EndIf", " "
   Data$ "Import"        , "EndImport", " "

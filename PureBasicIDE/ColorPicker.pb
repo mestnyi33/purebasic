@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ;- ----- Common stuff -----
 
@@ -90,8 +90,9 @@ Declare ColorPicker_UpdateColor(*Entry.ColorPickerData, Color)
 Declare ColorPicker_TriggerResize(*Entry.ColorPickerData)
 
 CompilerIf #CompileWindows
-  Global ScrollBarOldCallback ; for scrollbar updates
+  Global ScrollBarOldCallback ; for scrollbar updates  
 CompilerEndIf
+
 
 
 Procedure ColorPicker_LoadPalettes(*Entry.ColorPickerData)
@@ -589,9 +590,18 @@ Procedure ColorPicker_Wheel_Update(*Entry.ColorPickerData, DrawAll)
       Center = w / 2
       Radius = w / 2 - 10
       
+      CompilerIf #CompileLinuxGtk
+        *Style.GtkStyle = gtk_widget_get_style_(WindowID(#WINDOW_Main))
+        linbackcolor= RGB(*Style\bg[#GTK_STATE_NORMAL]\red >> 8, *Style\bg[#GTK_STATE_NORMAL]\green >> 8, *Style\bg[#GTK_STATE_NORMAL]\blue >> 8)
+      CompilerEndIf
+      
       ; clear the center
       DrawingMode(#PB_2DDrawing_Default)
-      Circle(Center, Center, *Entry\TriangleRadius, $FFFFFF)
+      CompilerIf #CompileLinux
+        Circle(Center, Center, *Entry\TriangleRadius, linbackcolor)
+      CompilerElse
+        Circle(Center, Center, *Entry\TriangleRadius, $FFFFFF)
+      CompilerEndIf
       DrawingMode(#PB_2DDrawing_Outlined)
       Circle(Center, Center, *Entry\TriangleRadius, $000000)
       
@@ -664,8 +674,13 @@ Procedure ColorPicker_Wheel_Setup(*Entry.ColorPickerData, CanvasX, CanvasY, Canv
   If StartDrawing(ImageOutput(#IMAGE_Color_Content1))
     w = OutputWidth()
     h = OutputHeight()
-    Box(0, 0, w, h, $FFFFFF)
-    
+    CompilerIf #CompileLinuxGtk
+      *Style.GtkStyle = gtk_widget_get_style_(WindowID(#WINDOW_Main))
+      linbackcolor= RGB(*Style\bg[#GTK_STATE_NORMAL]\red >> 8, *Style\bg[#GTK_STATE_NORMAL]\green >> 8, *Style\bg[#GTK_STATE_NORMAL]\blue >> 8)
+      Box(0, 0, w, h, linbackcolor)
+    CompilerElse
+      Box(0, 0, w, h, $FFFFFF)  
+    CompilerEndIf
     Center = w / 2
     Radius = w / 2 - 10
     
@@ -777,8 +792,13 @@ Procedure ColorPicker_Palette_Update(*Entry.ColorPickerData)
     h = OutputHeight()
     
     ; if a palette has less items than can be displayed, it is important to remove old content
-    Box(0, 0, w, h, $FFFFFF)
-    
+    CompilerIf #CompileLinuxGtk
+      *Style.GtkStyle = gtk_widget_get_style_(WindowID(#WINDOW_Main))
+      linbackcolor= RGB(*Style\bg[#GTK_STATE_NORMAL]\red >> 8, *Style\bg[#GTK_STATE_NORMAL]\green >> 8, *Style\bg[#GTK_STATE_NORMAL]\blue >> 8)
+      Box(0, 0, w, h, linbackcolor)
+    CompilerElse
+      Box(0, 0, w, h, $FFFFFF)
+    CompilerEndIf    
     DrawingMode(#PB_2DDrawing_Outlined)
     Box(0, 0, w, h, $000000)
     
@@ -949,9 +969,17 @@ Procedure ColorPicker_Name_Update(*Entry.ColorPickerData)
     
     w = OutputWidth()
     h = OutputHeight()
-    Box(0, 0, w, h, $FFFFFF)
-    
-    DrawingMode(#PB_2DDrawing_Default|#PB_2DDrawing_Transparent)
+    CompilerIf #CompileLinuxGtk
+      *Style.GtkStyle = gtk_widget_get_style_(WindowID(#WINDOW_Main))
+      linbackcolor= RGB(*Style\bg[#GTK_STATE_NORMAL]\red >> 8, *Style\bg[#GTK_STATE_NORMAL]\green >> 8, *Style\bg[#GTK_STATE_NORMAL]\blue >> 8)
+      linbackcolordark= RGB(*Style\dark[#GTK_STATE_NORMAL]\red >> 8, *Style\dark[#GTK_STATE_NORMAL]\green >> 8, *Style\dark[#GTK_STATE_NORMAL]\blue >> 8)
+      linfgcolor= RGB(*Style\fg[#GTK_STATE_NORMAL]\red >> 8, *Style\fg[#GTK_STATE_NORMAL]\green >> 8, *Style\fg[#GTK_STATE_NORMAL]\blue >> 8)
+      Box(0, 0, w, h, linbackcolor)
+    CompilerElse
+      Box(0, 0, w, h, $FFFFFF)
+    CompilerEndIf
+
+    DrawingMode(#PB_2DDrawing_Transparent | #PB_2DDrawing_NativeText)
     For row = 0 To *Entry\Rows ; draw also the last half row in the remaining space
       If *Entry\First + row >= FilteredPalette\Count
         Break
@@ -959,13 +987,25 @@ Procedure ColorPicker_Name_Update(*Entry.ColorPickerData)
       
       y = 1 + row * *Entry\RowHeight
       If row % 2
-        Box(1, y, w-2, *Entry\RowHeight, $E0E0E0)
+        CompilerIf #CompileLinux
+          Box(1, y, w-2, *Entry\RowHeight, linbackcolordark)
+        CompilerElse
+          Box(1, y, w-2, *Entry\RowHeight, $E0E0E0)
+        CompilerEndIf
       Else
-        Box(1, y, w-2, *Entry\RowHeight, $FFFFFF)
+        CompilerIf #CompileLinux
+          Box(1, y, w-2, *Entry\RowHeight, linbackcolor)
+        CompilerElse
+          Box(1, y, w-2, *Entry\RowHeight, $FFFFFF)
+        CompilerEndIf
       EndIf
       
       Box(w-3-*Entry\BoxWidth, y+2, *Entry\BoxWidth, *Entry\RowHeight-4, FilteredPalette\Entry(*Entry\First + row)\Color)
-      DrawText(5, y+4, FilteredPalette\Entry(*Entry\First + row)\Name$, $000000)
+        CompilerIf #CompileLinux
+          DrawText(5, y+4, FilteredPalette\Entry(*Entry\First + row)\Name$, linfgcolor)
+        CompilerElse
+          DrawText(5, y+4, FilteredPalette\Entry(*Entry\First + row)\Name$, $000000)
+        CompilerEndIf
     Next row
     
     If FilteredPalette\Count = 0
@@ -1021,7 +1061,7 @@ Procedure ColorPicker_Name_Setup(*Entry.ColorPickerData, CanvasX, CanvasY, Canva
   EndIf
   
   Height = CanvasHeight - ComboHeight - 10 - FilterHeight
-  *Entry\Rows  = (Height-2) / *Entry\RowHeight
+  *Entry\Rows  = DesktopScaledY(Height-2) / *Entry\RowHeight
   
   SetGadgetText(#GADGET_Color_Filter, "")
   ColorPicker_Name_UpdateFilter(*Entry)
@@ -1074,6 +1114,18 @@ Procedure ColorPicker_Name_Event(*Entry.ColorPickerData, Gadget, Type)
       EndIf
       
     Case #GADGET_Color_Canvas1
+      If Type = #PB_EventType_MouseWheel
+        *Entry\First - GetGadgetAttribute(#GADGET_Color_Canvas1, #PB_Canvas_WheelDelta)
+        If *Entry\First < 0
+          *Entry\First = 0
+        EndIf
+        If *Entry\First > *Palette\Count - GetGadgetAttribute(#GADGET_Color_Scroll, #PB_ScrollBar_PageLength)
+          *Entry\First = *Palette\Count - GetGadgetAttribute(#GADGET_Color_Scroll, #PB_ScrollBar_PageLength)
+        EndIf  
+        SetGadgetState(#GADGET_Color_Scroll, *Entry\First)
+        ColorPicker_Name_Update(*Entry)
+      EndIf
+
       If Type = #PB_EventType_LeftButtonDown
         row = (GetGadgetAttribute(#GADGET_Color_Canvas1, #PB_Canvas_MouseY) - 1) / *Entry\RowHeight
         Color = *Entry\First + row
@@ -1184,26 +1236,31 @@ Procedure ColorPicker_UpdateHistory(*Entry.ColorPickerData)
   If StartDrawing(CanvasOutput(#GADGET_Color_History))
     w = OutputWidth()
     h = OutputHeight()
-    Box(0, 0, w, h, $FFFFFF)
-    
-    cols = (w-5) / 23
+    CompilerIf #CompileLinuxGtk
+      *Style.GtkStyle = gtk_widget_get_style_(WindowID(#WINDOW_Main))
+      linbackcolor= RGB(*Style\bg[#GTK_STATE_NORMAL]\red >> 8, *Style\bg[#GTK_STATE_NORMAL]\green >> 8, *Style\bg[#GTK_STATE_NORMAL]\blue >> 8)
+      Box(0, 0, w, h, linbackcolor)
+    CompilerElse
+      Box(0, 0, w, h, $FFFFFF)
+    CompilerEndIf    
+    cols = (w-DesktopScaledX(5)) / DesktopScaledX(23)
     If cols < 1: cols = 1: EndIf
     
     For i = 0 To #ColorPicker_History-1
-      x = 4 + (i % cols) * 23
-      y = 4 + (i / cols) * 23
+      x = DesktopScaledX(4) + (i % cols) * DesktopScaledX(23)
+      y = DesktopScaledX(4) + (i / cols) * DesktopScaledX(23)
       
       If ColorPicker_History(i)\Alpha < 0
         DrawingMode(#PB_2DDrawing_Default)
-        Box(x, y, 20, 20, ColorPicker_History(i)\Color)
+        Box(x, y, DesktopScaledX(20), DesktopScaledX(20), ColorPicker_History(i)\Color)
       Else
         DrawingMode(#PB_2DDrawing_CustomFilter)
         CustomFilterCallback(@ColorPicker_TransparentFilter())
-        Box(x, y, 20, 20, ColorPicker_AddAlpha(ColorPicker_History(i)\Color, ColorPicker_History(i)\Alpha))
+        Box(x, y, DesktopScaledX(20), DesktopScaledX(20), ColorPicker_AddAlpha(ColorPicker_History(i)\Color, ColorPicker_History(i)\Alpha))
       EndIf
       
       DrawingMode(#PB_2DDrawing_Outlined)
-      Box(x, y, 20, 20, $000000)
+      Box(x, y, DesktopScaledX(20), DesktopScaledX(20), $000000)
     Next i
     
     DrawingMode(#PB_2DDrawing_Outlined)
@@ -1258,29 +1315,15 @@ Procedure ColorPicker_TriggerResize(*Entry.ColorPickerData)
   EndIf
 EndProcedure
 
-CompilerIf #CompileWindows
-  
-  ; To handle scrolling events in realtime one Windows. Not needed on Linux/OSX
-  ;
-  Procedure ColorPicker_ScrollbarCallback(Window, Message, wParam, lParam)
-    ; call the original callback first, so the gadget state is properly updated.
-    ;
-    Result = CallWindowProc_(ScrollBarOldCallback, Window, Message, wParam, lParam)
-    
-    ; now check our event
-    ;
-    If *ColorPicker And Message = #WM_HSCROLL Or Message = #WM_VSCROLL
-      *ColorPicker\EventFunction(*ColorPicker, #GADGET_Color_Scroll, 0)
-    EndIf
-    
-    ProcedureReturn Result
-  EndProcedure
-  
-CompilerEndIf
+; To handle scrolling events in realtime on Windows/macOS. Not needed on Linux
+;
+Procedure ColorPicker_ScrollbarCallback()
+  *ColorPicker\EventFunction(*ColorPicker, #GADGET_Color_Scroll, 0)
+EndProcedure
 
 ;- ----- ToolsPanel interface -----
 
-Procedure ColorPicker_CreateFunction(*Entry.ColorPickerData, PanelItemID)
+Procedure ColorPicker_CreateFunction(*Entry.ColorPickerData)
   *ColorPicker = *Entry
   
   ButtonGadget(#GADGET_Color_RGB,     0, 0, 0, 0, Language("ToolsPanel","Mode_RGB"),     #PB_Button_Toggle)
@@ -1301,9 +1344,8 @@ Procedure ColorPicker_CreateFunction(*Entry.ColorPickerData, PanelItemID)
   ScrollBarGadget(#GADGET_Color_Scroll, 0, 0, 0, 0, 0, 100, 10, #PB_ScrollBar_Vertical)
   StringGadget(#GADGET_Color_Filter, 0, 0, 0, 0, "")
   
-  CompilerIf #CompileWindows
-    ScrollBarOldCallback = SetWindowLongPtr_(GetParent_(GadgetID(#GADGET_Color_Scroll)), #GWL_WNDPROC, @ColorPicker_ScrollbarCallback())
-  CompilerEndIf
+  ; Use bind event for scrollbar gadget to be sure it update in realtime
+  BindGadgetEvent(#GADGET_Color_Scroll, @ColorPicker_ScrollbarCallback())
   
   CheckBoxGadget(#GADGET_Color_UseAlpha, 0, 0, 0, 0, Language("ToolsPanel", "UseAlpha"))
   CanvasGadget(#GADGET_Color_CanvasAlpha, 0, 0, 0, 0, #PB_Canvas_ClipMouse)
@@ -1642,8 +1684,8 @@ Procedure ColorPicker_EventHandler(*Entry.ColorPickerData, EventGadgetID)
       
     Case #GADGET_Color_History
       If EventType() = #PB_EventType_LeftButtonDown
-        x = GetGadgetAttribute(#GADGET_Color_History, #PB_Canvas_MouseX)
-        y = GetGadgetAttribute(#GADGET_Color_History, #PB_Canvas_MouseY)
+        x = DesktopUnscaledX(GetGadgetAttribute(#GADGET_Color_History, #PB_Canvas_MouseX))
+        y = DesktopUnscaledY(GetGadgetAttribute(#GADGET_Color_History, #PB_Canvas_MouseY))
         If x >= 4 And y >= 4
           col = (x-4) / 23
           row = (y-4) / 23

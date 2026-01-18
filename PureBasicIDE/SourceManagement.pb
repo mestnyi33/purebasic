@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 Global IsIDEConfigPresent ; ugly way to do this, but works. to test if the source was ever loaded by the IDE
@@ -46,41 +46,38 @@ Procedure RefreshSourceTitle(*Source.SourceFile)
   
   SetTabBarGadgetItemText(#GADGET_FilesPanel, Index, GetSourceTitle(*Source))
   
-  CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
-    If *Source = *ProjectInfo
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, GetCocoaColor("controlAccentColor"))
-    ElseIf *Source\IsForm And *Source\ProjectFile
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, GetCocoaColor("controlAccentColor"))
-    ElseIf *Source\IsForm
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, GetCocoaColor("controlAccentColor"))
-    ElseIf *Source\ProjectFile
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, GetCocoaColor("controlAccentColor"))
-    Else
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, GetCocoaColor("controlBackgroundColor"))
-    EndIf
-  CompilerElse
-    If *Source = *ProjectInfo
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_ProjectInfo)
-    ElseIf *Source\IsForm And *Source\ProjectFile
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_FormProjectFile)
-    ElseIf *Source\IsForm
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_FormFile)
-    ElseIf *Source\ProjectFile
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
-      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_ProjectFile)
-    Else
+  If *Source = *ProjectInfo
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_ProjectInfo)
+  ElseIf *Source\IsForm And *Source\ProjectFile
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_FormProjectFile)
+  ElseIf *Source\IsForm
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_FormFile)
+  ElseIf *Source\ProjectFile
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
+    SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #COLOR_ProjectFile)
+  Else
+    ; MacOS Colors
+    CompilerIf #CompileMac
+      
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, TabBarGadgetInclude\TextColor)
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, TabBarGadgetInclude\FaceColor)
+
+    CompilerElseIf #CompileLinuxGtk
+
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, TabBarGadgetInclude\TextColor)
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, TabBarGadgetInclude\FaceColor)
+      
+    CompilerElse
+      
       SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
       SetTabBarGadgetItemColor(#GADGET_FilesPanel, Index, #PB_Gadget_BackColor, #PB_Default)
-    EndIf
-  CompilerEndIf
+    
+    CompilerEndIf
+    
+  EndIf
 EndProcedure
 
 ; get the title string for the current element in FileList()
@@ -138,6 +135,9 @@ Procedure UpdateSourceStatus(Modified)
   
 EndProcedure
 
+; Note: Do not call FlushEvents() in here as this procedure is called during file loading and processing
+;       events could change the active source again and really mess things up!
+;
 Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
   
   If *OldSource = 0
@@ -148,6 +148,11 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
   ; a quick access. Does nothing if the data is up to date
   If *OldSource And *OldSource <> *ProjectInfo And *OldSource\IsForm = 0
     SortParserData(*OldSource\Parser, *OldSource)
+  EndIf
+  
+  ; preserve procedure browser scroll position
+  If ProcedureBrowserMode = 1 And *OldSource And *OldSource <> *ProjectInfo
+    *OldSource\ProcedureBrowserScroll = GetListViewScroll(#GADGET_ProcedureBrowser)
   EndIf
   
   AutoComplete_Close()
@@ -185,7 +190,9 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
   ResizeMainWindow()  ; make sure the EditorGadget is correctly sized
   
   If *ActiveSource = *ProjectInfo
+    EnsureListIconSelection(#GADGET_ProjectInfo_Files)
     HideGadget(#GADGET_ProjectInfo, 0)
+    SetActiveGadget(#GADGET_ProjectInfo_Files)
     
   Else
     If *ProjectInfo
@@ -243,7 +250,7 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
       
       FD_SelectNone()
       
-      CompilerIf #CompileWindows | #CompileMac
+      CompilerIf #CompileWindows | #CompileMac | #CompileLinuxQt
         AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Return, #MENU_Scintilla_Enter)
         AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Tab, #MENU_Scintilla_Tab)
         AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Shift | #PB_Shortcut_Tab, #MENU_Scintilla_ShiftTab)
@@ -253,7 +260,7 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
   Else
     currentwindow = 0 ; no more active form
     
-    CompilerIf #CompileWindows | #CompileMac
+    CompilerIf #CompileWindows | #CompileMac | #CompileLinuxQt
       AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Return, #MENU_Scintilla_Enter)
       AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Tab, #MENU_Scintilla_Tab)
       AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Shift | #PB_Shortcut_Tab, #MENU_Scintilla_ShiftTab)
@@ -270,19 +277,6 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
     EndIf
   EndIf
   
-  ; Note:
-  ;   For some odd reason, the ResizeMainWindow() above has no effect as long as the ScintillaGadget
-  ;   is not the topmost visible one on Linux. The result is that when you close all tabs, you end up
-  ;   with a newly created '<New>' source that is not visible (because its still sized 0,0)
-  ;
-  ;   This is a Linux only problem and i have no idea why, but just trying another
-  ;   resize after the proper gadget is visible and events are flushed fixes the trouble.
-  ;
-  CompilerIf #CompileLinux
-    FlushEvents() ; this still dispatches all events, so its not problematic
-    ResizeMainWindow()
-  CompilerEndIf
-  
   UpdateCursorPosition()
   
   ; enabled the folding update again, as strangely the fold mark in first line disappears otherwise !?
@@ -291,7 +285,7 @@ Procedure ChangeActiveSourcecode(*OldSource.SourceFile = 0)
     UpdateFolding(*ActiveSource, 0, -1)
   EndIf
   
-  UpdateProcedureList()
+  UpdateProcedureList(*ActiveSource\ProcedureBrowserScroll) ; apply previous scroll position (if any)
   UpdateVariableViewer()
   
   UpdateMenuStates()
@@ -344,11 +338,15 @@ Procedure NewSource(FileName$, ExecuteTool)
   FileList()\FileName$        = FileName$
   FileList()\Debugger         = OptionDebugger  ; set the default values
   FileList()\EnablePurifier   = OptionPurifier
+  FileList()\Optimizer        = OptionOptimizer
   FileList()\EnableASM        = OptionInlineASM
   FileList()\EnableXP         = OptionXPSkin
+  FileList()\EnableWayland    = OptionWayland
   FileList()\EnableAdmin      = OptionVistaAdmin
   FileList()\EnableUser       = OptionVistaUser
   FileList()\DPIAware         = OptionDPIAware
+  FileList()\DllProtection    = OptionDllProtection
+  FileList()\SharedUCRT       = OptionSharedUCRT
   FileList()\EnableThread     = OptionThread
   FileList()\EnableOnError    = OptionOnError
   FileList()\ExecutableFormat = OptionExeFormat
@@ -361,9 +359,10 @@ Procedure NewSource(FileName$, ExecuteTool)
   FileList()\UseBuildCount    = OptionUseBuildCount
   FileList()\UseCompileCount  = OptionUseCompileCount
   FileList()\TemporaryExePlace= OptionTemporaryExe
+  FileList()\CustomCompiler   = OptionCustomCompiler
+  FileList()\CompilerVersion$ = OptionCompilerVersion$
   FileList()\CurrentDirectory$= ""
   FileList()\ToggleFolds      = 1
-  FileList()\CustomCompiler   = 0
   FileList()\PurifierGranularity$ = ""
   FileList()\ExistsOnDisk     = #False
   
@@ -518,7 +517,7 @@ EndProcedure
 ;  So to avoid any confustion from a disappearing character we handle this conversion
 ;  as well when doing the Source encoding change.
 ;
-;  Lets hope there are no more such spechial characters.
+;  Let's hope there are no more such special characters.
 ;
 ; Some notes:
 ;  - unrepresentable chars become '?'
@@ -542,7 +541,7 @@ Procedure AsciiToUTF8(*out.ASCII, *outlen.LONG, *in.ASCII, *inlen.LONG)
       *out\a = $98
       *out + 1
       
-    ElseIf *in\a = $92     ; �-char. Turn this into U+2019
+    ElseIf *in\a = $92     ; ï¿½-char. Turn this into U+2019
       *out\a = $E2
       *out + 1
       *out\a = $80
@@ -712,11 +711,11 @@ EndMacro
 ;
 Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, ReportErrors)
   
-  If SaveProjectSettings = 3 And IsTempFile = 0 ; don't save anything
+  If SaveProjectSettings = #SAVESETTINGS_DoNotSave And IsTempFile = 0 ; don't save anything
     ProcedureReturn
   EndIf
   
-  If SaveProjectSettings = 0 And IsCodeFile = 0
+  If SaveProjectSettings = #SAVESETTINGS_EndOfFile And IsCodeFile = 0
     ; Do not save settings at the end of non-code files
     ; We do however save settings when they are not appended to the file to memorize cursor position etc
     ProcedureReturn
@@ -815,7 +814,6 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
     AddStringConfigLine("ExportArguments"   , *Target\ExportArguments$)
     AddStringConfigLine("ResourceDirectory" , *Target\ResourceDirectory$)
     AddFlagConfigLine("EnableResourceDirectory", *Target\EnableResourceDirectory)
-    AddFlagConfigLine("OptimizeJS"           , *Target\OptimizeJS)
     AddFlagConfigLine("CopyJavaScriptLibrary", *Target\CopyJavaScriptLibrary)
     AddFlagConfigLine("WebAppEnableDebugger" , *Target\WebAppEnableDebugger)
     
@@ -830,30 +828,34 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
     AddStringConfigLine("iOSAppResourceDirectory" , *Target\iOSAppResourceDirectory$)
     AddFlagConfigLine("iOSAppEnableResourceDirectory", *Target\iOSAppEnableResourceDirectory)
     AddStringConfigLine("iOSAppOrientation", Str(*Target\iOSAppOrientation))
-    AddFlagConfigLine("iOSAppGeolocation", *Target\iOSAppGeolocation)
     AddFlagConfigLine("iOSAppFullScreen" , *Target\iOSAppFullScreen)
     AddFlagConfigLine("iOSAppAutoUpload" , *Target\iOSAppAutoUpload)
     AddFlagConfigLine("iOSAppEnableDebugger" , *Target\iOSAppEnableDebugger)
+    AddFlagConfigLine("iOSAppKeepAppDirectory" , *Target\iOSAppKeepAppDirectory)
     
     ; AndroidApp
     ;
     AddStringConfigLine("AndroidAppName"        , *Target\AndroidAppName$)
     AddStringConfigLine("AndroidAppIcon"        , *Target\AndroidAppIcon$)
     AddStringConfigLine("AndroidAppVersion"     , *Target\AndroidAppVersion$)
+    AddStringConfigLine("AndroidAppCode"        , Str(*Target\AndroidAppCode))
     AddStringConfigLine("AndroidAppPackageID"   , *Target\AndroidAppPackageID$)
     AddStringConfigLine("AndroidAppIAPKey"      , *Target\AndroidAppIAPKey$)
     AddStringConfigLine("AndroidAppStartupImage", *Target\AndroidAppStartupImage$)
+    AddStringConfigLine("AndroidAppStartupColor", *Target\AndroidAppStartupColor$)
     AddStringConfigLine("AndroidAppOutput"      , *Target\AndroidAppOutput$)
     AddStringConfigLine("AndroidAppResourceDirectory" , *Target\AndroidAppResourceDirectory$)
     AddFlagConfigLine("AndroidAppEnableResourceDirectory", *Target\AndroidAppEnableResourceDirectory)
     AddStringConfigLine("AndroidAppOrientation" , Str(*Target\AndroidAppOrientation))
-    AddFlagConfigLine("AndroidAppGeolocation"   , *Target\AndroidAppGeolocation)
     AddFlagConfigLine("AndroidAppFullScreen"    , *Target\AndroidAppFullScreen)
     AddFlagConfigLine("AndroidAppAutoUpload"    , *Target\AndroidAppAutoUpload)
     AddFlagConfigLine("AndroidAppEnableDebugger", *Target\AndroidAppEnableDebugger)
+    AddFlagConfigLine("AndroidAppKeepAppDirectory", *Target\AndroidAppKeepAppDirectory)
+    AddFlagConfigLine("AndroidAppInsecureFileMode", *Target\AndroidAppInsecureFileMode)
     
   CompilerEndIf
   
+  AddFlagConfigLine("Optimizer", *Target\Optimizer)
   
   If *Target\EnableASM And IsCodeFile
     NbLines + 1
@@ -867,6 +869,10 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
     NbLines + 1
     ConfigLines$(NbLines) = "EnableXP"
   EndIf
+  If *Target\EnableWayland And IsCodeFile
+    NbLines + 1
+    ConfigLines$(NbLines) = "EnableWayland"
+  EndIf
   If *Target\EnableAdmin And IsCodeFile
     NbLines + 1
     ConfigLines$(NbLines) = "EnableAdmin"
@@ -878,6 +884,14 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
   If *Target\DPIAware And IsCodeFile
     NbLines + 1
     ConfigLines$(NbLines) = "DPIAware"
+  EndIf
+  If *Target\DllProtection And IsCodeFile
+    NbLines + 1
+    ConfigLines$(NbLines) = "DllProtection"
+  EndIf
+  If *Target\SharedUCRT And IsCodeFile
+    NbLines + 1
+    ConfigLines$(NbLines) = "SharedUCRT"
   EndIf
   If *Target\EnableOnError And IsCodeFile
     NbLines + 1
@@ -1074,7 +1088,7 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
   
   ; save the config lines now
   ;
-  If SaveProjectSettings = 0 Or IsTempFile ; in source file
+  If SaveProjectSettings = #SAVESETTINGS_EndOfFile Or IsTempFile ; in source file
     
     If *Source
       If *Source\NewLineType = 0
@@ -1096,7 +1110,7 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
       EndIf
     Next i
     
-  ElseIf *Source And SaveProjectSettings = 1 ; save in "filename.pb.cfg"
+  ElseIf *Source And SaveProjectSettings = #SAVESETTINGS_PerFileCfg ; save in "filename.pb.cfg"
     If CreateFile(#FILE_SaveConfig, *Source\FileName$+".cfg")
       For i = 1 To NbLines
         WriteStringN(#FILE_SaveConfig, ConfigLines$(i))
@@ -1106,7 +1120,7 @@ Procedure SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, Rep
       MessageRequester(#ProductName$, Language("FileStuff","SaveConfigError")+":"+#NewLine+*Source\FileName$+".cfg", #FLAG_Error)
     EndIf
     
-  ElseIf *Source And  SaveProjectSettings = 2 ; save in "project.cfg"
+  ElseIf *Source And  SaveProjectSettings = #SAVESETTINGS_PerFolderCfg ; save in "project.cfg"
     If CreateFile(#FILE_SaveConfig, GetPathPart(*Source\FileName$)+"project.cfg.new")
       If ReadFile(#FILE_ReadConfig, GetPathPart(*Source\FileName$)+"project.cfg")
         While Eof(#FILE_ReadConfig) = 0
@@ -1178,6 +1192,7 @@ Procedure AnalyzeSettings_Old(*Source.SourceFile, *Buffer, Length)
         If Line$ = "; EOF" : Found = 1
         ElseIf Line$ =          "; EnableAsm"         : Found = 1 : *Source\EnableASM = 1
         ElseIf Line$ =          "; EnableXP"          : Found = 1 : *Source\EnableXP  = 1
+        ElseIf Line$ =          "; EnableWayland"     : Found = 1 : *Source\EnableWayland = 1
         ElseIf Line$ =          "; EnableOnError"     : Found = 1 : *Source\EnableOnError = 1
         ElseIf Line$ =          "; DisableDebugger"   : Found = 1 : *Source\Debugger  = 0
         ElseIf Left(Line$,13) = "; Executable="       : Found = 1 : *Source\ExecutableName$   = Right(Line$, Len(Line$)-13)
@@ -1228,6 +1243,13 @@ Procedure AnalyzeSettings_Common(*Source.SourceFile, NbLines)  ; analyze the Con
   
   *Source\NbResourceFiles = 0
   
+  ; These configs are enabled by default, so if not present, should be 0
+  *Source\EnableXP      = 0
+  *Source\DPIAware      = 0
+  *Source\DllProtection = 0
+  *Source\SharedUCRT    = 0
+  *Source\EnableWayland = 0
+  
   ClearList(*Source\UnknownIDEOptionsList$())
   
   *Source\VersionInfo = 0
@@ -1236,6 +1258,12 @@ Procedure AnalyzeSettings_Common(*Source.SourceFile, NbLines)  ; analyze the Con
   Next i
   
   *Source\Watchlist$ = ""
+  
+  *Source\NbConstants = 0
+  For i = 0 To #MAX_Constants-1
+    *Source\Constant$[i] = ""
+    *Source\ConstantEnabled[i] = 0
+  Next i
   
   For i = 1 To NbLines
     index = FindString(ConfigLines$(i), "=", 1)
@@ -1255,11 +1283,11 @@ Procedure AnalyzeSettings_Common(*Source.SourceFile, NbLines)  ; analyze the Con
         IsIDEConfigPresent = 1
         
         CompilerIf #SpiderBasic
-        Case "OPTIMIZEJS"           : *Source\OptimizeJS = 1
         Case "WEBSERVERADDRESS"     : *Source\WebServerAddress$ = Value$
         Case "WINDOWTHEME"          : *Source\WindowTheme$ = Value$
         Case "GADGETTHEME"          : *Source\GadgetTheme$ = Value$
           
+        Case "OPTIMIZEJS"           : *Source\Optimizer = 1 ; Backward compatibility with older sources (now named "Optimizer")
         Case "WEBAPPNAME"           : *Source\WebAppName$ = Value$
         Case "WEBAPPICON"           : *Source\WebAppIcon$ = Value$
         Case "HTMLFILENAME"         : *Source\HtmlFilename$ = Value$
@@ -1279,35 +1307,42 @@ Procedure AnalyzeSettings_Common(*Source.SourceFile, NbLines)  ; analyze the Con
         Case "IOSAPPSTARTUPIMAGE" : *Source\iOSAppStartupImage$ = Value$
         Case "IOSAPPOUTPUT"       : *Source\iOSAppOutput$ = Value$
         Case "IOSAPPORIENTATION"  : *Source\iOSAppOrientation = Val(Value$)
-        Case "IOSAPPGEOLOCATION"  : *Source\iOSAppGeolocation = 1
         Case "IOSAPPFULLSCREEN"   : *Source\iOSAppFullScreen = 1
         Case "IOSAPPAUTOUPLOAD"   : *Source\iOSAppAutoUpload = 1
         Case "IOSAPPRESOURCEDIRECTORY"      : *Source\iOSAppResourceDirectory$ = Value$
         Case "IOSAPPENABLERESOURCEDIRECTORY": *Source\iOSAppEnableResourceDirectory = 1
         Case "IOSAPPENABLEDEBUGGER" : *Source\iOSAppEnableDebugger = 1
+        Case "IOSAPPKEEPAPPDIRECTORY" : *Source\iOSAppKeepAppDirectory = 1
           
         Case "ANDROIDAPPNAME"         : *Source\AndroidAppName$ = Value$
         Case "ANDROIDAPPICON"         : *Source\AndroidAppIcon$ = Value$
         Case "ANDROIDAPPVERSION"      : *Source\AndroidAppVersion$ = Value$
+        Case "ANDROIDAPPCODE"         : *Source\AndroidAppCode = Val(Value$)
         Case "ANDROIDAPPPACKAGEID"    : *Source\AndroidAppPackageID$ = Value$
         Case "ANDROIDAPPIAPKEY"       : *Source\AndroidAppIAPKey$ = Value$
         Case "ANDROIDAPPSTARTUPIMAGE" : *Source\AndroidAppStartupImage$ = Value$
+        Case "ANDROIDAPPSTARTUPCOLOR" : *Source\AndroidAppStartupColor$ = Value$
         Case "ANDROIDAPPOUTPUT"       : *Source\AndroidAppOutput$ = Value$
         Case "ANDROIDAPPORIENTATION"  : *Source\AndroidAppOrientation = Val(Value$)
-        Case "ANDROIDAPPGEOLOCATION"  : *Source\AndroidAppGeolocation = 1
         Case "ANDROIDAPPFULLSCREEN"   : *Source\AndroidAppFullScreen = 1
         Case "ANDROIDAPPAUTOUPLOAD"   : *Source\AndroidAppAutoUpload = 1
         Case "ANDROIDAPPRESOURCEDIRECTORY"      : *Source\AndroidAppResourceDirectory$ = Value$
         Case "ANDROIDAPPENABLERESOURCEDIRECTORY": *Source\AndroidAppEnableResourceDirectory = 1
         Case "ANDROIDAPPENABLEDEBUGGER" : *Source\AndroidAppEnableDebugger = 1
+        Case "ANDROIDAPPKEEPAPPDIRECTORY" : *Source\AndroidAppKeepAppDirectory = 1
+        Case "ANDROIDAPPINSECUREFILEMODE" : *Source\AndroidAppInsecureFileMode = 1
           
-        CompilerEndIf
+      CompilerEndIf
         
+      Case "OPTIMIZER":        *Source\Optimizer = 1
       Case "ENABLEASM":        *Source\EnableASM = 1
       Case "ENABLEXP":         *Source\EnableXP = 1
+      Case "ENABLEWAYLAND":    *Source\EnableWayland = 1
       Case "ENABLEADMIN":      *Source\EnableAdmin = 1
       Case "ENABLEUSER":       *Source\EnableUser = 1
       Case "DPIAWARE":         *Source\DPIAware = 1
+      Case "DLLPROTECTION":    *Source\DllProtection = 1
+      Case "SHAREDUCRT":       *Source\SharedUCRT = 1
       Case "ENABLETHREAD":     *Source\EnableThread = 1
       Case "ENABLEONERROR":    *Source\EnableOnError = 1
       Case "DISABLEDEBUGGER":  *Source\Debugger = 0
@@ -1576,7 +1611,7 @@ EndProcedure
 Procedure AnalyzeProjectSettings(*Source.SourceFile, *Buffer, Length, IsTempFile)
   
   
-  If SaveProjectSettings = 3 ; don't save anything
+  If SaveProjectSettings = #SAVESETTINGS_DoNotSave And IsTempFile = 0 ; don't save anything
     ProcedureReturn Length
   EndIf
   
@@ -1585,10 +1620,13 @@ Procedure AnalyzeProjectSettings(*Source.SourceFile, *Buffer, Length, IsTempFile
     *Source\ErrorLog      = 1
     *Source\EnableASM     = 0
     *Source\EnableThread  = 0
-    *Source\EnableXP      = 0
+    *Source\EnableXP      = 1
+    *Source\EnableWayland = 0
     *Source\EnableAdmin   = 0
     *Source\EnableUser    = 0
-    *Source\DPIAware      = 0
+    *Source\DPIAware      = 1
+    *Source\DllProtection = 0
+    *Source\SharedUCRT    = 0
     *Source\EnableOnError = 0
     *Source\VersionInfo   = 0
     *Source\ErrorLog      = 1
@@ -1620,7 +1658,7 @@ Procedure AnalyzeProjectSettings(*Source.SourceFile, *Buffer, Length, IsTempFile
     If IsTempFile ; for temp file, it is only inside the current source.
       ReturnValue = AnalyzeSettings_SourceFile(*Source, *Buffer, Length)
       
-    ElseIf SaveProjectSettings = 0
+    ElseIf SaveProjectSettings = #SAVESETTINGS_EndOfFile
       Result = AnalyzeSettings_SourceFile(*Source, *Buffer, Length)
       If Result < Length ; settings were found
         ReturnValue = Result
@@ -1631,16 +1669,16 @@ Procedure AnalyzeProjectSettings(*Source.SourceFile, *Buffer, Length, IsTempFile
         ReturnValue = Length
       EndIf
       
-    ElseIf SaveProjectSettings = 1
+    ElseIf SaveProjectSettings = #SAVESETTINGS_PerFileCfg
       If AnalyzeSettings_ConfigFile(*Source)
         ReturnValue = Length
       ElseIf AnalyzeSettings_ProjectFile(*Source)
         ReturnValue = Length
-      Else
+       Else
         ReturnValue = AnalyzeSettings_SourceFile(*Source, *Buffer, Length)
       EndIf
       
-    ElseIf SaveProjectSettings = 2
+    ElseIf SaveProjectSettings = #SAVESETTINGS_PerFolderCfg
       If AnalyzeSettings_ProjectFile(*Source)
         ReturnValue = Length
       ElseIf AnalyzeSettings_ConfigFile(*Source)
@@ -1674,7 +1712,7 @@ Procedure FindSourceFile(FileName$)
   
 EndProcedure
 
-Procedure LoadSourceFile(FileName$, Activate = 1)
+Procedure LoadSourceFile(FileName$, Activate = 1, AddToRecentFiles = 1)
   success = 0
   
   ; Check if this is a project file
@@ -1697,10 +1735,17 @@ Procedure LoadSourceFile(FileName$, Activate = 1)
   ; Check if this is a form (file extension only for now)
   ; NOTE: it needs to be after the already opened check !
   If LCase(GetExtensionPart(FileName$)) = "pbf"
+    
+    If FD_VersionCheck(FileName$) = #PB_MessageRequester_No
+      ProcedureReturn 0
+    EndIf
+
     OpenForm(FileName$)
     RecentFiles_AddFile(FileName$, #False)
+    AddTools_Execute(#TRIGGER_SourceLoad, *ActiveSource)
     LinkSourceToProject(*ActiveSource) ; Link To project (If any)
     ProcedureReturn 1
+    
   EndIf
   
   ; reset the current source
@@ -1730,13 +1775,43 @@ Procedure LoadSourceFile(FileName$, Activate = 1)
       
       ; Don't check PB sources, as it can contains weird characters well handled by Scintilla: https://www.purebasic.fr/english/viewtopic.php?f=4&t=61467
       ;
-      If (IsPureBasicFile(FileName$) = #False And IsBinaryFile(*Buffer, FileLength)) Or (Format <> #PB_Ascii And Format <> #PB_UTF8) ; check for binary files
-        FreeMemory(*Buffer)
-        CloseFile(#FILE_LoadSource)
-        ChangeStatus("", 0)
-        FileViewer_OpenFile(Filename$)
-        ProcedureReturn 1
+      If IsPureBasicFile(FileName$) = #False
+        IsBinary = IsBinaryFile(*Buffer, FileLength)
+      
+        ;first check for OpenFile-Triggers
+        If IsCodeFile(FileName$) = 0 ;exclude all code files, even those the user added
+          AddTools_RunFileViewer = 1 ; to check if some tool has been executed
+          AddTools_File$ = FileName$
+          Ext$ = LCase(GetExtensionPart(FileName$))
+          CloseFile(#FILE_LoadSource) ;better close the file here, or the tools might have problems to access it
+          AddTools_Execute(#TRIGGER_OpenFile_Special, 0) ; special open file tools have highest priority
+          If AddTools_RunFileViewer
+            Select IsBinary
+              Case 0
+                AddTools_Execute(#TRIGGER_OpenFile_nonPB_Text, 0)
+              Case 1
+                AddTools_Execute(#TRIGGER_OpenFile_nonPB_Binary, 0)
+            EndSelect
+          EndIf
+          If AddTools_RunFileViewer = 0
+            FreeMemory(*Buffer)
+            ChangeStatus("", 0)
+            ProcedureReturn 1
+          EndIf
+        EndIf
+        ;now check for common FileViewer tools
+        ;common FileViewer tools, will only trigger for binary files and non-PB files with an unknown BOM
+        If IsBinary Or (Format <> #PB_Ascii And Format <> #PB_UTF8)
+          FreeMemory(*Buffer)
+          If IsFile(#FILE_LoadSource)
+            CloseFile(#FILE_LoadSource)
+          EndIf
+          ChangeStatus("", 0)
+          FileViewer_OpenFile(Filename$)
+          ProcedureReturn 1
+        EndIf
       EndIf
+      
       
       NewSource(FileName$, #False)
       
@@ -1767,9 +1842,13 @@ Procedure LoadSourceFile(FileName$, Activate = 1)
       *ActiveSource\ExistsOnDisk  = #True
       *ActiveSource\LastWriteDate = GetFileDate(*ActiveSource\Filename$, #PB_Date_Modified)
       *ActiveSource\DiskFileSize  = FileSize(*ActiveSource\Filename$)
-      *ActiveSource\DiskChecksum  = FileFingerprint(*ActiveSource\Filename$, #PB_Cipher_MD5)
+      DisableDebugger
+        *ActiveSource\DiskChecksum  = FileFingerprint(*ActiveSource\Filename$, #PB_Cipher_MD5)
+      EnableDebugger
       
-      RecentFiles_AddFile(FileName$, #False)
+      If AddToRecentFiles
+        RecentFiles_AddFile(FileName$, #False)
+      EndIf
       AddTools_Execute(#TRIGGER_SourceLoad, *ActiveSource)
       FullSourceScan(*ActiveSource)
       UpdateFolding(*ActiveSource, 0, -1)
@@ -1841,8 +1920,9 @@ Procedure LoadSourceFile(FileName$, Activate = 1)
       MessageRequester(#ProductName$, Language("FileStuff","LoadError")+#NewLine+FileName$, #FLAG_Error)
       ChangeStatus(Language("FileStuff","LoadError"), 3000)
     EndIf
-    
-    CloseFile(#FILE_LoadSource)
+    If IsFile(#FILE_LoadSource)
+      CloseFile(#FILE_LoadSource)
+    EndIf
   Else
     MessageRequester(#ProductName$, Language("FileStuff","LoadError")+#NewLine+FileName$, #FLAG_Error)
     ChangeStatus(Language("FileStuff","LoadError"), 3000)
@@ -1873,6 +1953,7 @@ Procedure SaveSourceFile(FileName$)
     
     If FormWindows()\current_view = 0 ; Design view, we need to use the special form save routine. In code view, we just save the code as any other source
       FD_Save(FileName$)
+      AddTools_Execute(#TRIGGER_SourceSave, *ActiveSource)
       ProcedureReturn 1
     EndIf
   EndIf
@@ -1957,6 +2038,10 @@ Procedure LoadTempFile(FileName$)  ; load the specified file over the current op
     Format = ReadStringFormat(#FILE_LoadSource)
     FileLength = Lof(#FILE_LoadSource)-Loc(#FILE_LoadSource) ; subtract the BOM size!
     
+    If FileLength > 0
+    *Buffer = AllocateMemory(FileLength+1)
+  EndIf
+    
     If Format = #PB_Ascii
       *ActiveSource\Parser\Encoding = 0
       SendEditorMessage(#SCI_SETCODEPAGE, 0, 0)
@@ -1967,6 +2052,8 @@ Procedure LoadTempFile(FileName$)  ; load the specified file over the current op
     
     If FileLength > 0
       *Buffer = AllocateMemory(FileLength+1)
+    Else ; For empty text, we need to clear the scintilla component (https://www.purebasic.fr/english/viewtopic.php?p=615379#p615379)
+      StreamTextIn(ToUTF8(""), 0)
     EndIf
     
     If *Buffer
@@ -2228,10 +2315,29 @@ Procedure SaveSourceAs()
       EndIf
     EndIf
     
+    ; Check if file already open in IDE
+    *SourceBeingClosed = 0
+    ForEach FileList()
+      If @FileList() <> *ActiveSource
+        If IsEqualFile(FileList()\FileName$, FileName$)
+          PromptedUser = 1
+          If MessageRequester(#ProductName$, Language("FileStuff","FileIsOpen")+#NewLine+Language("FileStuff","CloseOverWrite"), #PB_MessageRequester_YesNo|#FLAG_Warning) = #PB_MessageRequester_Yes
+            *SourceBeingClosed = @FileList()
+            Break
+          Else
+            ProcedureReturn SaveSourceAs()  ; try again
+          EndIf
+        EndIf
+      EndIf
+    Next
+    If *SourceBeingClosed <> 0
+      RemoveSource(*SourceBeingClosed)
+    EndIf
+    
     ; On Cocoa the file exists dialog is already in the SavePanel, so only popup if we added an extension
     ;
-    If ForceFileCheck Or #CompileMacCocoa = 0
-      If FileSize(FileName$) > -1  ; file exist check
+    If (ForceFileCheck Or #CompileMacCocoa = 0) And *SourceBeingClosed = 0
+      If FileSize(FileName$) > -1 And IsEqualFile(FileName$, *ActiveSource\FileName$) = 0 ; file exist check
         If MessageRequester(#ProductName$, Language("FileStuff","FileExists")+#NewLine+Language("FileStuff","OverWrite"), #PB_MessageRequester_YesNo|#FLAG_Warning) = #PB_MessageRequester_No
           ProcedureReturn SaveSourceAs()  ; try again
         EndIf
@@ -2241,7 +2347,10 @@ Procedure SaveSourceAs()
     Result = SaveSourceFile(FileName$)
     
     If Result
+      UnlinkSourceFromProject(*ActiveSource, #True)
       *ActiveSource\FileName$ = FileName$
+      LinkSourceToProject(*ActiveSource)
+      
       UpdateMainWindowTitle() ; we now have a new filename
       RefreshSourceTitle(*ActiveSource)
       HistoryEvent(*ActiveSource, #HISTORY_SaveAs)
@@ -2271,6 +2380,8 @@ EndProcedure
 
 
 Procedure RemoveSource(*Source.SourceFile = 0)
+  
+  FlushEvents()
   
   If *Source = 0
     *Source = *ActiveSource
@@ -2369,7 +2480,6 @@ Procedure RemoveSource(*Source.SourceFile = 0)
   EndIf
   
   ChangeActiveSourcecode()
-  FreeEditorGadget(Gadget)
   
   ; make sure the options are closed (for non-project files)
   ; If this is true, we switched from a project file to non-project file while the options
@@ -2390,6 +2500,11 @@ Procedure RemoveSource(*Source.SourceFile = 0)
   ; There is almost no flicker anymore, so it actually looks quite good.
   FlushEvents()
   
+  ; Remove old EditorGadget
+  ; Fix a stack corruption on OSX, needs to be after FlushEvent().
+  ; All events must be processed before the EditorGadget is removed.
+  FreeEditorGadget(Gadget)
+  
 EndProcedure
 
 Procedure CheckSourceSaved(*Source.SourceFile = 0)
@@ -2402,7 +2517,20 @@ Procedure CheckSourceSaved(*Source.SourceFile = 0)
     ProcedureReturn 1
   EndIf
   
+  ; Decide if a save prompt is needed
+  PromptUser = #False
   If GetSourceModified(*Source)
+    If *Source\FileName$ <> ""
+      PromptUser = #True
+    Else
+      ; Only prompt user to save a 'New' source if it's non-empty
+      If ScintillaSendMessage(*Source\EditorGadget, #SCI_GETLENGTH) > 0
+        PromptUser = #True
+      EndIf
+    EndIf
+  EndIf
+  
+  If PromptUser
     
     ; need to make it current for display of the question
     If *Source <> *ActiveSource
@@ -2421,7 +2549,7 @@ Procedure CheckSourceSaved(*Source.SourceFile = 0)
     
     If Result = #PB_MessageRequester_Yes
       Status = SaveSource()
-      If Status = 0 And *ActiveSource\FileName$ <> "" And (SaveProjectSettings = 1 Or SaveProjectSettings = 2 )
+      If Status = 0 And *ActiveSource\FileName$ <> "" And (SaveProjectSettings = #SAVESETTINGS_PerFileCfg Or SaveProjectSettings = #SAVESETTINGS_PerFolderCfg)
         ; if the compiler options are not stored at the end of the sourcefile,
         ; we save them even if the source is not saved.
         ; Do not report an error though (for example if the source was loaded from CD)
@@ -2430,7 +2558,7 @@ Procedure CheckSourceSaved(*Source.SourceFile = 0)
       ProcedureReturn Status
       
     ElseIf Result = #PB_MessageRequester_No
-      If *ActiveSource\FileName$ <> "" And (SaveProjectSettings = 1 Or SaveProjectSettings = 2 )
+      If *ActiveSource\FileName$ <> "" And (SaveProjectSettings = #SAVESETTINGS_PerFileCfg Or SaveProjectSettings = #SAVESETTINGS_PerFolderCfg)
         ; if the compiler options are not stored at the end of the sourcefile,
         ; we save them even if the source is not saved.
         ; Do not report an error though (for example if the source was loaded from CD)
@@ -2447,7 +2575,7 @@ Procedure CheckSourceSaved(*Source.SourceFile = 0)
     
     ; Why should we save the setting even if a source a not modified ?
     ;
-    If *Source\FileName$ <> "" And (SaveProjectSettings = 1 Or SaveProjectSettings = 2 )
+    If *Source\FileName$ <> "" And (SaveProjectSettings = #SAVESETTINGS_PerFileCfg Or SaveProjectSettings = #SAVESETTINGS_PerFolderCfg)
       ; if the compiler options are not stored at the end of the sourcefile,
       ; we save them even if the source is not saved.
       ; Do not report an error though (for example if the source was loaded from CD)
@@ -2585,6 +2713,19 @@ Procedure AutoSave()  ; called before compiling / creating executable to do the 
     
   EndIf
   
+EndProcedure
+
+Procedure ShowInFolder()
+  If *ActiveSource
+    If *ActiveSource = *ProjectInfo
+      FileToShow$ = ProjectFile$
+    Else
+      FileToShow$ = *ActiveSource\FileName$
+    EndIf
+    If FileToShow$
+      ShowExplorerFile(FileToShow$)
+    EndIf
+  EndIf
 EndProcedure
 
 Procedure ReloadSource()
@@ -2726,7 +2867,7 @@ Procedure FileMonitorEvent()
           ChangeActiveSourceCode()  ; show the file to the user
           FlushEvents()
           
-          If MessageRequester(#ProductName$, LanguagePattern("FileStuff","DeletedOnDisk", "%filename%", FileList()\FileName$), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+          If MessageRequester(#ProductName$, LanguagePattern("FileStuff","DeletedOnDisk", "%filename%", GetFilePart(FileList()\FileName$)), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
             SaveSourceFile(*ActiveSource\Filename$)
             HistoryEvent(*ActiveSource, #HISTORY_Save)
           Else
@@ -2739,6 +2880,9 @@ Procedure FileMonitorEvent()
         ElseIf Size <> FileList()\DiskFileSize Or (FileList()\LastWriteDate <> GetFileDate(FileList()\FileName$, #PB_Date_Modified) And FileList()\DiskChecksum <> FileFingerprint(FileList()\FileName$, #PB_Cipher_MD5))
           ; file modified on disk
           
+          ; Set this here before making the changes, otherwise FlushEvents() below causes a recursion and we miss updates to multiple files
+          FileMonitorWindowOpen = 1
+          
           ; update disk information
           FileList()\LastWriteDate = GetFileDate(FileList()\Filename$, #PB_Date_Modified)
           FileList()\DiskFileSize  = FileSize(FileList()\Filename$)
@@ -2748,9 +2892,9 @@ Procedure FileMonitorEvent()
           FlushEvents()
           
           If GetSourceModified() ; different message if the file is modified
-            Message$ = LanguagePattern("FileStuff","ModifiedOnDisk2", "%filename%", FileList()\Filename$)
+            Message$ = LanguagePattern("FileStuff","ModifiedOnDisk2", "%filename%", GetFilePart(FileList()\Filename$))
           Else
-            Message$ = LanguagePattern("FileStuff","ModifiedOnDisk1", "%filename%", FileList()\Filename$)
+            Message$ = LanguagePattern("FileStuff","ModifiedOnDisk1", "%filename%", GetFilePart(FileList()\Filename$))
           EndIf
           
           FileMonitorWindowDialog = OpenDialog(?Dialog_FileMonitor, WindowID(#WINDOW_Main))
@@ -2760,13 +2904,14 @@ Procedure FileMonitorEvent()
             
             StickyWindow(#WINDOW_FileMonitor, 1)
             DisableWindow(#WINDOW_Main, 1)
-            FileMonitorWindowOpen = 1
             
             SetActiveWindow(#WINDOW_FileMonitor)
             SetActiveGadget(#GADGET_FileMonitor_Reload)
+            
+            ProcedureReturn ; do not continue checking until the requester window is closed by the user
+          Else
+            FileMonitorWindowOpen = 0 ; should not happen
           EndIf
-          
-          ProcedureReturn ; do not continue checking until the requester window is closed by the user
           
         EndIf
       EndIf

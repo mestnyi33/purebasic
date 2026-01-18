@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 ;windows only
@@ -62,7 +62,6 @@ CompilerIf #CompileWindows
   EndProcedure
   
   
-  
   Procedure OSStartupCode()
     Shared DontCreateExtensions
     
@@ -84,6 +83,7 @@ CompilerIf #CompileWindows
       CompilerIf Defined(FredLocalCompile, #PB_Constant) ; Fred config
         CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
           CompilerIf #SpiderBasic
+            CompilerError "Use PureBasic x86 to compile the SpiderBasic IDE on Windows"
             PureBasicPath$ = "C:\PureBasic\Svn\"+#SVNVersion+"\Build\SpiderBasic_x64\"
           CompilerElse
             PureBasicPath$ = "C:\PureBasic\Svn\"+#SVNVersion+"\Build\PureBasic_x64\"
@@ -99,6 +99,10 @@ CompilerIf #CompileWindows
         PureBasicPath$ = #PB_Compiler_Home
       CompilerEndIf
       
+      If FileSize(PureBasicPath$) <> -2
+        MessageRequester("RootPath not found", "RootPath '" + PureBasicPath$ + "' not found !", #PB_MessageRequester_Error)
+        End
+      EndIf
       
       
     CompilerEndIf
@@ -110,14 +114,6 @@ CompilerIf #CompileWindows
       PureBasicPath$ = Space(#MAX_PATH)
       GetModuleFileName_(GetModuleHandle_(#Null$), @PureBasicPath$, #MAX_PATH)
       PureBasicPath$ = GetPathPart(PureBasicPath$)
-    EndIf
-    
-    ; initialize the scintilla dll. if it does not work, output a proper message,
-    ; otherwise the ide acts quite weird.
-    ;
-    If InitScintilla(PureBasicPath$+"Compilers\Scintilla.dll") = 0
-      MessageRequester(#ProductName$, "Cannot initialize Scintilla engine!"+#NewLine+"Make sure the 'Scintilla.dll' is placed in the 'Compilers' subdirectory of your "+#ProductName$+" setup.", #FLAG_Error)
-      End
     EndIf
     
     TempPath$        = GetTemporaryDirectory()
@@ -297,6 +293,11 @@ CompilerIf #CompileWindows
     Result = #PB_ProcessPureBasicEvents
     
     If Message = #WM_DROPFILES ; drag and drop stuff
+      
+      CompilerIf #PB_Compiler_Debugger
+        InDragDropCallback = #True
+      CompilerEndIf
+      
       *hdrop = wParam
       
       count = DragQueryFile_(*hdrop, $FFFFFFFF, 0, 0)
@@ -316,6 +317,10 @@ CompilerIf #CompileWindows
       Next i
       
       DragFinish_(*hdrop)
+      
+      CompilerIf #PB_Compiler_Debugger
+        InDragDropCallback = #False
+      CompilerEndIf
       
     ElseIf Message = #WM_SYSCOMMAND
       wParam & $FFF0    ; mask out the windows internal 4 bits
@@ -420,24 +425,6 @@ CompilerIf #CompileWindows
         
         result = #True
         
-      ElseIf *copydata\dwData = AsciiConst('A', 'U', 'T', '1') And *copydata\cbData > 0
-        ; Automation request. Use new values like 'AUT2' for new/incompatible requests
-        ; that are added at a later time (there is no 'version check' or similar)
-        ; See also DispatchEvent() in UserInterface.pb
-        ProcessAutomationRequest(wParam, lParam)
-        result = #True
-        
-      ElseIf *copydata\dwData = AsciiConst('A', 'E', 'X', 'E') And *copydata\cbData > 0
-        ; Request to check executable filename. This is done during the connection of the
-        ; automation, so it is processed specially (for simplicity)
-        Filename$ = PeekS(*copydata\lpData, -1, #PB_UTF8)
-        If IsEqualFile(Filename$, ProgramFilename())
-          ; send positive response
-          PostMessage_(wParam, RunOnceMessageID, AsciiConst3('A', 'O', 'K'), WindowID(#WINDOW_Main))
-        EndIf
-        result = #True
-        
-        
       EndIf
       
       
@@ -522,24 +509,29 @@ CompilerIf #CompileWindows
       
       ; Menu ids in the sysmenu should be below $F000 and above $000F (as the low 4 bits are masked out)
       ;
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Stop<<4,  LanguageStringAddress("MenuItem","Stop"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Run<<4,   LanguageStringAddress("MenuItem","Run"))
+      CompilerIf Not #SpiderBasic
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Stop<<4,  LanguageStringAddress("MenuItem","Stop"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Run<<4,   LanguageStringAddress("MenuItem","Run"))
+      CompilerEndIf
       AppendMenu_(hSubMenu, #MF_STRING, #MENU_Kill<<4,  LanguageStringAddress("MenuItem","Kill"))
       AppendMenu_(hSubMenu, #MF_SEPARATOR, 0, @"")
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Step<<4,  LanguageStringAddress("MenuItem","Step"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepX<<4, LanguageStringAddress("MenuItem","StepX"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepOver<<4, LanguageStringAddress("MenuItem","StepOver"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepOut<<4, LanguageStringAddress("MenuItem","StepOut"))
-      AppendMenu_(hSubMenu, #MF_SEPARATOR, 0, @"")
+      CompilerIf Not #SpiderBasic
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Step<<4,  LanguageStringAddress("MenuItem","Step"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepX<<4, LanguageStringAddress("MenuItem","StepX"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepOver<<4, LanguageStringAddress("MenuItem","StepOver"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_StepOut<<4, LanguageStringAddress("MenuItem","StepOut"))
+        AppendMenu_(hSubMenu, #MF_SEPARATOR, 0, @"")
+      CompilerEndIf
       AppendMenu_(hSubMenu, #MF_STRING, #MENU_DebugOutput<<4,  LanguageStringAddress("MenuItem","DebugOutput"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Watchlist<<4,    LanguageStringAddress("MenuItem","WatchList"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_VariableList<<4, LanguageStringAddress("MenuItem","VariableList"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Profiler<<4, LanguageStringAddress("MenuItem","Profiler"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_History<<4,      LanguageStringAddress("MenuItem","History"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_Memory<<4,       LanguageStringAddress("MenuItem","Memory"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_LibraryViewer<<4,       LanguageStringAddress("MenuItem","LibraryViewer"))
-      AppendMenu_(hSubMenu, #MF_STRING, #MENU_DebugAsm<<4,     LanguageStringAddress("MenuItem","DebugAsm"))
-      
+      CompilerIf Not #SpiderBasic
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Watchlist<<4,    LanguageStringAddress("MenuItem","WatchList"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_VariableList<<4, LanguageStringAddress("MenuItem","VariableList"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Profiler<<4, LanguageStringAddress("MenuItem","Profiler"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_History<<4,      LanguageStringAddress("MenuItem","History"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_Memory<<4,       LanguageStringAddress("MenuItem","Memory"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_LibraryViewer<<4,       LanguageStringAddress("MenuItem","LibraryViewer"))
+        AppendMenu_(hSubMenu, #MF_STRING, #MENU_DebugAsm<<4,     LanguageStringAddress("MenuItem","DebugAsm"))
+      CompilerEndIf      
       
       ; insert into system menu
       ;
@@ -576,10 +568,14 @@ CompilerIf #CompileWindows
     ;
     CreateSYSTEMMenu()
     
-    ; get the bold font for the statusbar
-    If GetObject_(GetStockObject_(#DEFAULT_GUI_FONT), SizeOf(LOGFONT), @fontinfo.LOGFONT)
-      fontinfo\lfWeight = #FW_BOLD
-      StatusbarBoldFontID = CreateFontIndirect_(@fontinfo)
+    
+    ;  This is the recommanded way to create a font which is correctly DPI aware. Don't use GetStockObject_(#DEFAULT_GUI_FONT) as it's not DPI aware
+    ;
+    Metrics.NONCLIENTMETRICS 
+    Metrics\cbSize = SizeOf(NONCLIENTMETRICS)
+    If SystemParametersInfo_(#SPI_GETNONCLIENTMETRICS, SizeOf(Metrics), @Metrics, 0)
+      Metrics\lfMessageFont\lfWeight = #FW_BOLD
+      StatusbarBoldFontID = CreateFontIndirect_(@Metrics\lfMessageFont)
     EndIf
     
     If StatusbarBoldFontID = 0
@@ -849,5 +845,27 @@ CompilerIf #CompileWindows
     ProcedureReturn Result
   EndProcedure
   
+  Procedure IsScreenReaderActive()
+    
+    ; Detect screen readers that properly announce their presence
+    ;
+    IsActive = 0
+    If SystemParametersInfo_(#SPI_GETSCREENREADER, 0, @IsActive, 0)
+      If IsActive
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    
+    ; Special case for the "Narrator" reader included in Windows which does not use the above setting
+    ; (this is not documented)
+    ;
+    hMutex = OpenMutex_(#SYNCHRONIZE, #False, @"NarratorRunning")
+    If hMutex
+      CloseHandle_(hMutex)
+      ProcedureReturn #True
+    EndIf
+
+    ProcedureReturn #False
+  EndProcedure
   
 CompilerEndIf

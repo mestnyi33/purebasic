@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 ;
@@ -10,7 +10,7 @@
 ; selection, scroll position and open nodes stay consistent
 ;
 ; For this, we store the ProjectFiles() pointer in the GadgetItemData
-; Spechal values for the GadgetItemData:
+; Special values for the GadgetItemData:
 ;
 #ProjectPanel_Directory    = 0
 #ProjectPanel_InternalBase = -1
@@ -439,7 +439,7 @@ Procedure UpdateProjectPanel()
 EndProcedure
 
 
-Procedure ProjectPanel_CreateFunction(*Entry.ToolsPanelEntry, PanelItemID)
+Procedure ProjectPanel_CreateFunction(*Entry.ToolsPanelEntry)
   
   ; Note: The ProjectPanel menu is created in CreateIDEPopupMenu() as the ProjectInfo uses it too
   ;
@@ -709,7 +709,7 @@ Procedure ProjectPanel_EventHandler(*Entry.ToolsPanelEntry, EventGadgetID)
         If Index <> -1
           *File.ProjectFile = GetGadgetItemData(#GADGET_ProjectPanel, Index)
           If ProjectPanel_IsFile(*File)
-            LoadSourceFile(*File\FileName$) ; will just switch if open
+            LoadSourceFile(*File\FileName$, 1, 0) ; will just switch if open
           EndIf
         EndIf
         
@@ -746,5 +746,6 @@ AvailablePanelTools()\NeedDestroyFunction  = 1
 AvailablePanelTools()\ToolID$              = "ProjectPanel"
 AvailablePanelTools()\PanelTitle$          = "ProjectPanelShort"
 AvailablePanelTools()\ToolName$            = "ProjectPanelLong"
+AvailablePanelTools()\PanelTabOrder        = 2
 
 

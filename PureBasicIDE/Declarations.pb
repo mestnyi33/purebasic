@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ;
 ; This file should contain *all* function declarations that are meant to be used publicly.
@@ -56,7 +56,6 @@ Declare SetWindowForeground_NoActivate(Window) ; set window to the foreground wi
 Declare SetWindowStayOnTop(Window, StayOnTop)  ; make window stay on top
 Declare GetPanelWidth(Gadget)                  ; get width of panelgadget items
 Declare GetPanelHeight(Gadget)                 ; get height of panelgadget items
-Declare GetPanelItemID(Gadget, Item)           ; get id of panelgadget item (only for plugins)
 Declare RedrawGadget(Gadget)                   ; trigger an update of the gadget (must work with the EditorGadget!)
 Declare SelectComboBoxText(Gadget)             ; select all text in editable combobox
 Declare SetStringBufferSize(NewSize)           ; set the size of the string manipoulation buffer (for debugger)
@@ -70,12 +69,13 @@ Declare.s GetExplorerName()                    ; returns the name of the system 
 Declare ShowExplorerDirectory(Directory$)      ; open a directory in the system file viewer
 Declare ModifierKeyPressed(Key)                ; Check if #PB_Shortcut_Control, _Alt, _Shift, _Command is pressed
 Declare OpenWebBrowser(Url$)                   ; open the default web browser
+Declare GetListViewScroll(Gadget)              ; Get listview vertical scroll position
+Declare SetListViewScroll(Gadget, Position)    ; Set listview vertical scroll position
 
 CompilerIf #CompileWindows
-  Declare SetCodePage(Gadget)         ; set the correct codepage for the editorgadget (windows only)
   Declare SetWindowForeground_Real(Window) ; grab focus from other apps
 CompilerEndIf
-CompilerIf #CompileLinux
+CompilerIf #CompileLinuxGtk
   Declare GTKSignalConnect(*Widget, Signal$, Function, user_data)
 CompilerEndIf
 
@@ -95,8 +95,8 @@ Declare Session_End(OSSessonID$)           ; end session
 Declare AutoComplete_SetFocusCallback()    ; set up a callback that ends the autocomplete if the autocomplete window looses focus
 Declare AutoComplete_AdjustWindowSize(MaxWidth, MaxHeight) ; allows to dynamically resize the autocomplete window
 Declare ToolsPanel_ApplyColors(Gadget)                     ; change gadget colors & font. (for toolspanel gadgets), currently supports listview, listicon, explorertree, explorerlist
-                                                           ; Declare GetCPUInfo(*Free.LONG, *Used.LONG) ; update the cpu monitor list, and fill the general values with info
-                                                           ; Declare CPUMonitor_Init()              ; initialiue the cpu monitoring feature
+Declare IsScreenReaderActive()        ; attempt to detect running screen reader software
+
 CompilerIf #CompileWindows
   Declare CreateSYSTEMMenu()           ; adds the Debugger menu to the window systemmenu
   Declare IsAdmin()
@@ -150,13 +150,14 @@ Declare.s GetContinuationLine(Index, *Offset.INTEGER = 0, *Source.SourceFile = 0
 Declare SetLine(Index, NewLine$)                                                               ; replace the indexed line with the given text (and highlight it again)
 Declare CreateEditorGadget()                                                                   ; create the editing gadget for this source (must call ChangeActiveSource() right after creating the gadget!)
 Declare SetReadOnly(Gadget, State)                                                             ; set the editing gadget to readonly
-Declare InsertCodeString(String$)                                                              ; insert given string at the current position (also converts to utf8 if needed)
+Declare InsertCodeString(String$, MoveCursor = #False)                                         ; insert given string at the current position (also converts to utf8 if needed)
 Declare Undo()                                                                                 ; perform the standard editior function
 Declare Redo()
 Declare Cut()
 Declare Copy()
 Declare Paste()
 Declare PasteAsComment()
+Declare AdjustSelection(Mode)
 Declare ZoomStep(Direction)
 Declare ZoomDefault()
 Declare SelectAll()
@@ -241,19 +242,7 @@ Declare AutoComplete_Close()                     ; abort autocomplete
 Declare AutoComplete_Insert()                    ; confirm autocomplete
 Declare AutoComplete_InsertEndKEyword()          ; insert "end" keyword on second keypress
 Declare AutoComplete_ChangeSelectedItem(Direction)
-
-;- Automation.pb
-;
-CompilerIf #CompileWindows = 0
-  Declare ProcessAutomationRequest()
-CompilerElse
-  Declare ProcessAutomationRequest(WindowID, *copy.COPYDATASTRUCT)
-CompilerEndIf
-Declare InitAutomation()                  ; initialize automation
-Declare ShutdownAutomation()              ; shutdown automation
-
-Declare IsAutomationEventClient(Event$)    ; automation events
-Declare AutomationEvent_AutoComplete(List Elements.s())
+Declare AutoComplete_InitContextConstants()
 
 ;- CodeViewer.pb
 ;
@@ -299,6 +288,7 @@ Declare SetCompileTargetDefaults(*Target.CompileTarget) ; set defaults for a new
 Declare CompilerReady()                                 ; called after compiler is loaded
 Declare DisplayCompilerWindow()                         ; display 'compileing in progress'
 Declare HideCompilerWindow()
+Declare AddCompilerWindowItem(Text$)
 Declare CompilerWindowEvents(EventID)
 Declare BuildWindowEvents(EventID)
 Declare UpdateBuildWindow()
@@ -326,6 +316,10 @@ CompilerIf #DEBUG
   Declare DebuggingWindowEvents(EventID)
   Declare OpenDebuggingWindow()
 CompilerEndIf
+
+;- DiffAlgorithm.pb
+;
+Declare Diff(*Ctx.DiffContext, *BufferA, SizeA, *BufferB, SizeB, Flags = 0)
 
 ;- DiffWindow.pb
 ;
@@ -361,7 +355,7 @@ Declare IsBinaryFile(*Buffer, Length) ; returns true if the buffer contains nont
 
 ;- FindWindow.pb
 ;
-Declare OpenFindWindow()
+Declare OpenFindWindow(Replace = #False)
 Declare UpdateFindWindow()
 Declare FindWindowEvents(EventID)
 
@@ -372,6 +366,7 @@ Declare.s UniqueFilename(File$)                     ; return a unique representa
 Declare   IsEqualFile(File1$, File2$)               ; returns true if the 2 filenames identify the same file
 Declare.s CreateRelativePath(BasePath$, FileName$)  ; turn the full path FileName$ into a relative one to BasePath$
 Declare.s ResolveRelativePath(BasePath$, FileName$) ; merge a base path and a relative path to a full path
+Declare   CreateDirectoryRecursive(Directory$)      ; create a directory and its parent directories, recursively if necessary
 
 ;- GotoWindow.pb
 ;
@@ -393,7 +388,7 @@ Declare GrepWindowEvents(EventID)
 Declare InitSyntaxCheckArrays()       ; create arrays like the ValidCharacters of TriggerCharacters
 Declare InitSyntaxHighlighting()      ; initialize the highlighting
 Declare BuildCustomKeywordTable()     ; build the needed HT etc from the CustomKeywordList() list and file
-Declare HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, *HighlightCallback, IsSourceCode) ; call the engine
+Declare HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, *HighlightCallback, IsSourceCode, DisableFormatting = 0) ; call the engine
 Declare IsBasicKeyword(Word$, *LineStart = 0, *WordStart = 0)
 
 ;- HighlightingFunctions.pb
@@ -404,6 +399,7 @@ Declare.s GetModulePrefix(*Buffer, BufferLength, Position)                      
 Declare.s GetCurrentWord()                                                                               ; get the current word of the source file.
 Declare.s GetCurrentLine()                                                                               ; return the text of the current line
 Declare.s GetNumber(Line$, Position)                                                                     ; position is 0-based
+Declare.s FindEnclosingFunction(Line$, Cursor, *StartPosition.INTEGER, *Parameter.INTEGER)               ; all arguments 0-based
 Declare InsertComments()                                                                                 ; comment this block
 Declare RemoveComments()                                                                                 ; uncomment this block
 Declare InsertTab()                                                                                      ; tab intend a block
@@ -488,11 +484,8 @@ Declare ParseString(String$)                                   ; parse a string 
 Declare.s GetStringToken(Index)                                ; return token from previously parsed string
 Declare.s StrByteSize(Size.q)                                  ; get a nice looking filesize / memory size value (with KB, MB, GB attached)
 Declare IsNumeric(Text$, *Output.INTEGER)                      ; check if a text is a valid number and return it if true
-Declare CatchPackedImage(Image, *Address.LONG, Index)          ; load an image that was packed & then included
 Declare.s RGBString(Color)                                     ; turns a color into a string "RGB(a,b,c)" as a platform independent color representation
 Declare ColorFromRGBString(String$)                            ; turns the result of RGBString() back into a color
-Declare StringToUTF8(String$)                                  ; returns the UTF8 version of the string, needs to be freed with FreeMemory()!
-Declare StringToAscii(String$)                                 ; returns the Ascii version of the string, needs to be freed with FreeMemory()!
 Declare.s ModulePrefix(Name$, ModuleName$)                     ; prefix a module name (if not empty)
 Declare StringToCodePage(CodePage, String$)                    ; transform string to Scintilla compatible code page (must be freed!)
 Declare CodePageLength(CodePage, String$)                      ; get length of string in Scintilla compatible code page
@@ -505,12 +498,19 @@ Declare ApplyPreferences()            ; apply prefs changes to the editor and al
 Declare OpenPreferencesWindow()
 Declare UpdatePreferenceWindow()
 Declare PreferencesWindowEvents(EventID)
+Declare UpdatePreferenceSyntaxColor(ColorIndex, Color)
+Declare UpdateImageColorGadget(Gadget, Image, Color)
 
 ;- ProcedureBrowser.pb
 ;
-Declare UpdateProcedureList() ; scan active source and update the procedure list and the autocomplete lists
+Declare UpdateProcedureList(ScrollPosition.l = -1) ; scan active source and update the procedure list and the autocomplete lists
                               ;Declare ProcedureList_LineUpdate()    ; check if the current line is in the procedure list and update if necessary.
 Declare JumpToProcedure()     ; jump to procedure under cursor (for double-click)
+
+;- WebView.pb
+;
+Declare SetWebViewUrl(Url$)
+Declare OpenSpiderWebBrowser(Url$)
 
 ;- ProjectManagement.pb
 ;
@@ -560,6 +560,16 @@ EndMacro
 
 Declare ShutdownIDE() ; perform all code for an orderly shutdown.
 
+;- RadixTree.pb
+;
+Declare RadixFree(*Tree.RadixTree)                                              ; Free all tree nodes
+Declare RadixFindPrefix(*Tree.RadixTree, Prefix$, ExactMatchOnly = #False)      ; Lookup RadixNode by prefix. Returns RadixNode, not node value!
+Declare RadixLookupValue(*Tree.RadixTree, Name$)                                ; Lookup stored value by exact name match (case insensitive)
+Declare RadixFindRange(*Tree.RadixTree, Prefix$, *First.INTEGER, *Last.INTEGER) ; Lookup first and last value matching the given prefix. Returns true/false if any match is found
+Declare RadixEnumerateAll(*Tree.RadixTree, List *Values())                      ; Enumerate all stored values (sorted alphabetically). Clears the list
+Declare RadixEnumeratePrefix(*Tree.RadixTree, Name$, List *Values())            ; Enumerate all stored values with given prefix (sorted alphabetically). Clears the list
+Declare RadixInsert(*Tree.RadixTree, Name$, *Value)                             ; Insert a value into the tree
+
 ;- RecentFiles.pb
 ;
 Declare RecentFiles_AddMenuEntries(IsProject)  ; add entries to the recentfiles menu (doesn't create submenu)
@@ -591,7 +601,7 @@ Declare ChangeActiveSourcecode(*OldSource.SourceFile = 0) ; change the active so
 Declare NewSource(FileName$, ExecuteTool)                 ; create a new source (with optional name to load a file in)
 Declare SaveProjectSettings(*Target.CompileTarget, IsCodeFile, IsTempFile, ReportErrors) ; save the settings of *ActiveSource (a file must be open in write mode!)
 Declare AnalyzeProjectSettings(*Source.SourceFile, *Buffer, Length, IsTempFile)          ; fill the *Source structure with the project settings from *Buffer. (return new project length)
-Declare LoadSourceFile(FileName$, Activate = 1)                                          ; load the given file into a new source (if not already open)
+Declare LoadSourceFile(FileName$, Activate = 1, AddToRecentFiles = 1)                    ; load the given file into a new source (if not already open)
 Declare SaveSourceFile(FileName$)                                                        ; save the current source to the given name
 Declare LoadTempFile(FileName$)                                                          ; load the specified file over the current opened source
 Declare SaveTempFile(FileName$)                                                          ; save the current source to a temp name (no change of modified/unmodified by this!)
@@ -618,7 +628,6 @@ Declare FullSourceScan(*Source.SourceFile)      ; rescan entire source
 Declare PartialSourceScan(*Source.SourceFile, StartLine, EndLine)  ; rescan some lines (returns true if line(s) changed)
 Declare ScanLine(*Source.SourceFile, Line)                         ; scan single line ( + continuations) returns true if line(s) changed
 Declare ScanFile(FileName$, *Parser.ParserData)                    ; scan a file from disk (for project management)
-Declare GetBucket(*Name.Character)                                 ; gets the bucket index for the given name
 Declare SortParserData(*Parser.ParserData, *Source.SourceFile=0)   ; update the sorted parser data
 Declare SourceLineCorrection(*Source.SourceFile, Line, LinesAdded) ; adjust line offset in scanned tree
 Declare LocateSourceItem(*Parser.ParserData, Line, Position)       ; Return the SourceItem pointer for the item at the given location (if any)
@@ -636,6 +645,7 @@ Declare.s ResolveItemType(*InputItem.SourceItem, InputLine, *OutType.INTEGER)
 Declare LocateStructureBaseItem(Line$, Position, *pItem.INTEGER, *pLine.INTEGER, List StructureStack.s())
 Declare IsLineContinuation(*Buffer, *Pointer.PTR) ; returns true if *Pointer is the end of a line with continuation
 Declare IsContinuedLineStart(Line$)               ; returns true if Line$ is the beginning of a line with line continuation at the end
+Declare.s Parser_Cleanup(Input$)                  ; cleanup a prototype string (remove newlines, line continutaions and extra whitespace)
 Declare CharsToBytes(Line$, Start, Encoding, Chars)   ; Convert a char offset (0-based) to a byte offset in the specified encoding
 Declare BytesToChars(Line$, Start, Encoding, Bytes)   ; Convert a byte offset (0-based) to a char offset in the specified encoding
 
@@ -709,6 +719,7 @@ Declare CheckForUpdatesSchedule()     ; perform an update check if the configure
 
 ;- UserInterface.pb
 ;
+Declare StartupCheckScreenReader()    ; Check for screen reader on first IDE start and ask to set accessibility mode
 Declare CreateIDEMenu()               ; (re)create the main menu
 Declare CreateIDEPopupMenu()          ; (re)create the popup menu
 Declare CreateGUI()                   ; create the main window gui

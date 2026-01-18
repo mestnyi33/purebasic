@@ -1,12 +1,12 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ; Do not use OnError if the real debugger is present (for better debugging)
-;
-CompilerIf #PB_Compiler_Debugger = 0
+; Note: OnError() isn't supported on Windows arm64 for now so disable it
+CompilerIf #PB_Compiler_Debugger = 0 And (#CompileWindows = 0 Or #PB_Compiler_Processor <> #PB_Processor_Arm64)
   
   ErrorHandler_Called = #False
   

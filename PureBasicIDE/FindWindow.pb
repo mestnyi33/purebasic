@@ -1,11 +1,12 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
-Procedure OpenFindWindow()
+Procedure OpenFindWindow(Replace = #False)
+  Protected FindFromSelection
   
   If IsWindow(#WINDOW_Find) = 0
     
@@ -30,11 +31,19 @@ Procedure OpenFindWindow()
         SetGadgetState(#GADGET_Find_NoComments,   FindNoComments)
         SetGadgetState(#GADGET_Find_NoStrings,    FindNoStrings)
         SetGadgetState(#GADGET_Find_SelectionOnly,FindSelectionOnly)
+        SetGadgetState(#GADGET_Find_AutoWrap,     FindAutoWrap)
         
-        SetGadgetState(#GADGET_Find_DoReplace,  0) ; doreplace should always be disabled when opening this window.
-        DisableGadget(#GADGET_Find_ReplaceWord, 1)
-        DisableGadget(#GADGET_Find_Replace, 1)
-        DisableGadget( #GADGET_Find_Replaceall, 1)
+        If Replace
+          SetGadgetState(#GADGET_Find_DoReplace,  1)
+          DisableGadget(#GADGET_Find_ReplaceWord, 0)
+          DisableGadget(#GADGET_Find_Replace, 0)
+          DisableGadget( #GADGET_Find_ReplaceAll, 0)
+        Else
+          SetGadgetState(#GADGET_Find_DoReplace,  0) ; doreplace should always be disabled when opening this window.
+          DisableGadget(#GADGET_Find_ReplaceWord, 1)
+          DisableGadget(#GADGET_Find_Replace, 1)
+          DisableGadget( #GADGET_Find_ReplaceAll, 1)
+        EndIf
         
         SetGadgetState(#GADGET_Find_FindWord, 0) ; select the last entry
         
@@ -49,6 +58,7 @@ Procedure OpenFindWindow()
             ; display the default selection in the box
             Line$ = Mid(GetLine(LineStart-1), RowStart, RowEnd-RowStart)
             SetGadgetText(#GADGET_Find_FindWord, Line$)
+            FindFromSelection = #True
           EndIf
         EndIf
       EndIf
@@ -59,8 +69,15 @@ Procedure OpenFindWindow()
     SetWindowForeground(#WINDOW_Find)
   EndIf
   
-  SelectComboBoxText(#GADGET_Find_FindWord)
-  SetActiveGadget(#GADGET_Find_FindWord)
+  ; If replacement is requested from a selection, use that selection as the search word and select the last entry replacement word
+  If GetGadgetState(#GADGET_Find_DoReplace)  And FindFromSelection
+    SetGadgetState(#GADGET_Find_ReplaceWord, 0) ; select the last entry
+    SelectComboBoxText(#GADGET_Find_ReplaceWord)
+    SetActiveGadget(#GADGET_Find_ReplaceWord)
+  Else
+    SelectComboBoxText(#GADGET_Find_FindWord)
+    SetActiveGadget(#GADGET_Find_FindWord)
+  EndIf
   
 EndProcedure
 
@@ -102,11 +119,11 @@ Procedure FindWindowEvents(EventID)
           If GetGadgetState(#GADGET_Find_DoReplace)
             DisableGadget(#GADGET_Find_ReplaceWord, 0)
             DisableGadget(#GADGET_Find_Replace, 0)
-            DisableGadget( #GADGET_Find_Replaceall, 0)
+            DisableGadget( #GADGET_Find_ReplaceAll, 0)
           Else
             DisableGadget(#GADGET_Find_ReplaceWord, 1)
             DisableGadget(#GADGET_Find_Replace, 1)
-            DisableGadget( #GADGET_Find_Replaceall, 1)
+            DisableGadget( #GADGET_Find_ReplaceAll, 1)
           EndIf
           
         Case #GADGET_Find_FindNext,
@@ -117,6 +134,7 @@ Procedure FindWindowEvents(EventID)
             FindNoComments    = GetGadgetState(#GADGET_Find_NoComments)
             FindNoStrings     = GetGadgetState(#GADGET_Find_NoStrings)
             FindSelectionOnly = GetGadgetState(#GADGET_Find_SelectionOnly)
+            FindAutoWrap      = GetGadgetState(#GADGET_Find_AutoWrap)
             FindDoReplace     = GetGadgetState(#GADGET_Find_DoReplace)
             FindSearchString$ = GetGadgetText(#Gadget_Find_FindWord)
             FindReplaceString$= SearchString$
@@ -137,7 +155,7 @@ Procedure FindWindowEvents(EventID)
         Case #GADGET_Find_Replace
           If *ActiveSource <> *ProjectInfo
             *Debugger.DebuggerData = IsDebuggedFile(*ActiveSource)
-            If *Debugger And *Debugger\CanDestroy = 0 ; no error if the code finished executing
+            If *Debugger And *Debugger\CanDestroy = 0 And #SpiderBasic = 0 ; no error if the code finished executing. In SpiderBasic the file is never locked.
               MessageRequester(#ProductName$, Language("Debugger","EditError"), #FLAG_INFO)
             Else
               FindCaseSensitive = GetGadgetState(#GADGET_Find_Case)
@@ -145,6 +163,7 @@ Procedure FindWindowEvents(EventID)
               FindNoComments    = GetGadgetState(#GADGET_Find_NoComments)
               FindNoStrings     = GetGadgetState(#GADGET_Find_NoStrings)
               FindSelectionOnly = GetGadgetState(#GADGET_Find_SelectionOnly)
+              FindAutoWrap      = GetGadgetState(#GADGET_Find_AutoWrap)
               FindDoReplace     = GetGadgetState(#GADGET_Find_DoReplace)
               FindSearchString$ = GetGadgetText(#Gadget_Find_FindWord)
               FindReplaceString$= GetGadgetText(#GADGET_Find_ReplaceWord)
@@ -155,10 +174,10 @@ Procedure FindWindowEvents(EventID)
             SetWindowForeground(#WINDOW_Find)
           EndIf
           
-        Case #GADGET_Find_Replaceall
+        Case #GADGET_Find_ReplaceAll
           If *ActiveSource <> *ProjectInfo
             *Debugger.DebuggerData = IsDebuggedFile(*ActiveSource)
-            If *Debugger And *Debugger\CanDestroy = 0 ; no error if the code finished executing
+            If *Debugger And *Debugger\CanDestroy = 0 And #SpiderBasic = 0 ; no error if the code finished executing. In SpiderBasic the file is never locked.
               MessageRequester(#ProductName$, Language("Debugger","EditError"), #FLAG_INFO)
             Else
               FindCaseSensitive = GetGadgetState(#GADGET_Find_Case)
@@ -166,12 +185,15 @@ Procedure FindWindowEvents(EventID)
               FindNoComments    = GetGadgetState(#GADGET_Find_NoComments)
               FindNoStrings     = GetGadgetState(#GADGET_Find_NoStrings)
               FindSelectionOnly = GetGadgetState(#GADGET_Find_SelectionOnly)
+              FindAutoWrap      = GetGadgetState(#GADGET_Find_AutoWrap)
               FindDoReplace     = GetGadgetState(#GADGET_Find_DoReplace)
               FindSearchString$ = GetGadgetText(#Gadget_Find_FindWord)
               FindReplaceString$= GetGadgetText(#GADGET_Find_ReplaceWord)
               UpdateFindComboBox(#Gadget_Find_FindWord)
               UpdateFindComboBox(#GADGET_Find_ReplaceWord)
+              SendEditorMessage(#SCI_BEGINUNDOACTION, 0, 0)
               FindText(3)
+              SendEditorMessage(#SCI_ENDUNDOACTION, 0, 0)
             EndIf
             SetWindowForeground(#WINDOW_Find)
           EndIf
@@ -190,6 +212,7 @@ Procedure FindWindowEvents(EventID)
     FindNoComments    = GetGadgetState(#GADGET_Find_NoComments)
     FindNoStrings     = GetGadgetState(#GADGET_Find_NoStrings)
     FindSelectionOnly = GetGadgetState(#GADGET_Find_SelectionOnly)
+    FindAutoWrap      = GetGadgetState(#GADGET_Find_AutoWrap)
     FindDoReplace     = GetGadgetState(#GADGET_Find_DoReplace)
     
     ; save search strings

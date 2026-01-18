@@ -1,11 +1,15 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
-#NbIntendKeywords = 47
+CompilerIf #SpiderBasic
+  #NbIntendKeywords = 49
+CompilerElse
+  #NbIntendKeywords = 47
+CompilerEndIf
 
 Structure IntendKeywords
   Keyword$
@@ -203,7 +207,7 @@ Procedure DisplayMacroError(MacroErrorLine, List MacroLines.s())
       EndIf
     Next i
     
-    *Buffer = StringToAscii(Buffer$) ; Needs to be freed with FreeMemory() !
+    *Buffer = Ascii(Buffer$) ; Needs to be freed with FreeMemory() !
     If *Buffer
       SetCodeViewer(#GADGET_MacroError_Scintilla, *Buffer, *ActiveSource\Parser\Encoding)
       FreeMemory(*Buffer)
@@ -301,6 +305,8 @@ DataSection
   Data$ "ProcedureCDLL", "EndProcedure" : Data.l  0, 1, 1, 0
   Data$ "ProcedureDLL", "EndProcedure"  : Data.l  0, 1, 1, 0
   Data$ "EndProcedure", "Procedure,ProcedureC,ProcedureDLL,ProcedureCDLL": Data.l -1, 0, 0, 1
+  Data$ "HeaderSection", "EndHeaderSection" : Data.l  0, 1, 1, 0
+  Data$ "EndHeaderSection", "HeaderSection" : Data.l -1, 0, 0, 1
   
 EndDataSection
 

@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 Declare VariableWindowSort(*Debugger.DebuggerData, Gadget)
@@ -648,7 +648,7 @@ Procedure VariableWindowEvents(*Debugger.DebuggerData, EventID)
   ElseIf EventID = #PB_Event_SizeWindow
     ResizeGadget(*Debugger\Gadgets[#DEBUGGER_GADGET_Variable_Panel], 10, 10, WindowWidth(*Debugger\Windows[#DEBUGGER_WINDOW_Variable])-20, WindowHeight(*Debugger\Windows[#DEBUGGER_WINDOW_Variable])-20)
     
-    CompilerIf #CompileLinux
+    CompilerIf #CompileLinuxGtk
       ; the resize fails on Linux else when opening the window
       FlushEvents()
     CompilerEndIf
@@ -959,7 +959,7 @@ Procedure OpenVariableWindow(*Debugger.DebuggerData)
       EndIf
       VariableWindowEvents(*Debugger, #PB_Event_SizeWindow)
       
-      CompilerIf #CompileLinux
+      CompilerIf #CompileLinuxGtk
         FlushEvents() ; Flush the events to finish window creation/resize or SetGadgetState() could fail on linux: https://www.purebasic.fr/english/viewtopic.php?f=23&t=48589
       CompilerEndIf
       
@@ -1326,7 +1326,7 @@ Procedure VariableDebug_DebuggerEvent(*Debugger.DebuggerData)
           AddNew = 1
         Else
           AddNew = 0
-          Protected Dim InfoStrings$(*Debugger\Command\Value2)
+          Dim InfoStrings$(*Debugger\Command\Value2)
         EndIf
       Else
         Gadget   = *Debugger\Gadgets[#DEBUGGER_GADGET_Variable_LocalListInfo]
@@ -1431,7 +1431,7 @@ Procedure VariableDebug_DebuggerEvent(*Debugger.DebuggerData)
           AddNew = 1
         Else
           AddNew = 0
-          Protected Dim InfoStrings$(*Debugger\Command\Value2)
+          Dim InfoStrings$(*Debugger\Command\Value2)
         EndIf
       Else
         Gadget   = *Debugger\Gadgets[#DEBUGGER_GADGET_Variable_LocalMapInfo]

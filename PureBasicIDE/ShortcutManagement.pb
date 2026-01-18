@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 
@@ -416,209 +416,6 @@ Procedure IndependentNameToShortcut(Name$)
   ProcedureReturn Shortcut
 EndProcedure
 
-CompilerIf #CompileMacCarbon
-  
-  ; OSX uses symbols for its shortcuts. Unfortunately these are characters in the unicode range, but the IDE is ascii only.
-  ; To solve this, we "subclass" the ListIcon's ItemData callback by replacing it and calling the original one only when needed
-  ; In the callback we construct a unicode string with our shortcut symbols and set it
-  ; This way we have a consistent user interface with other Mac apps
-  ;
-  Global ItemDataCallbackUPP, RealItemDataCallbackUPP, ShortcutColumnProperty
-  
-  ProcedureC MacItemCallback(Gadget, itemID, property, itemData, ChangeValue)
-    Status = #noErr
-    
-    ; itemID-1 is the index in the gadget
-    Shortcut = Prefs_KeyboardShortcuts(itemID-1)
-    
-    ; Keep this in sync with the ListIconGadget.c handling in the callback
-    ; We lookup the column list to find out what column is used
-    ;
-    If ChangeValue = 0 And property = ShortcutColumnProperty And Shortcut <> 0
-      
-      *Buffer = AllocateMemory(500*SizeOf(WORD))
-      If *Buffer
-        *Cursor.WORD = *Buffer
-        
-        If Shortcut & #PB_Shortcut_Control
-          *Cursor\w = $2303 ; /* U+2303 UP ARROWHEAD */
-          *Cursor + 2
-        EndIf
-        
-        If Shortcut & #PB_Shortcut_Alt
-          *Cursor\w = $2325 ; /* U+2325 OPTION KEY */
-          *Cursor + 2
-        EndIf
-        
-        If Shortcut & #PB_Shortcut_Shift
-          *Cursor\w = $21E7 ; /* U+21E7 UPWARDS WHITE ARROW */
-          *Cursor + 2
-        EndIf
-        
-        If Shortcut & #PB_Shortcut_Command
-          *Cursor\w = $2318 ; /* Command key symbol U+2318 PLACE OF INTEREST SIGN */
-          *Cursor + 2
-        EndIf
-        
-        Shortcut = Shortcut & $FFFF
-        
-        Select Shortcut
-            
-          Case #PB_Shortcut_A To #PB_Shortcut_Z
-            *Cursor\w = Shortcut - 'a' + 'A'
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Back
-            *Cursor\w = $232B ; /* U+232B ERASE To THE LEFT */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Return
-            *Cursor\w = $21A9 ; /* U+21A9 LEFTWARDS ARROW With HOOK */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Escape
-            *Cursor\w = $238B ; /* U+238B BROKEN CIRCLE With NORTHWEST ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Prior
-            *Cursor\w = $21DE ; /* U+21DE UPWARDS ARROW With DOUBLE STROKE */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Next
-            *Cursor\w = $21DF ; /* U+21DF DOWNWARDS ARROW With DOUBLE STROKE */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_End
-            *Cursor\w = $2198 ; /* U+2198 SOUTH EAST ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Home
-            *Cursor\w = $2196 ; /* U+2196 NORTH WEST ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Left
-            *Cursor\w = $2190 ; /* U+2190 LEFTWARDS ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Up
-            *Cursor\w = $2191 ; /* U+2191 UPWARDS ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Right
-            *Cursor\w = $2192 ; /* U+2192 RIGHTWARDS ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Down
-            *Cursor\w = $2193 ; /* U+2193 DOWNWARDS ARROW */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_Delete
-            *Cursor\w = $2326 ; /* U+2326 ERASE To THE RIGHT */
-            *Cursor + 2
-            
-          Case #PB_Shortcut_F1
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '1': *Cursor + 2
-            
-          Case #PB_Shortcut_F2
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '2': *Cursor + 2
-            
-          Case #PB_Shortcut_F3
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '3': *Cursor + 2
-            
-          Case #PB_Shortcut_F4
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '4': *Cursor + 2
-            
-          Case #PB_Shortcut_F5
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '5': *Cursor + 2
-            
-          Case #PB_Shortcut_F6
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '6': *Cursor + 2
-            
-          Case #PB_Shortcut_F7
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '7': *Cursor + 2
-            
-          Case #PB_Shortcut_F8
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '8': *Cursor + 2
-            
-          Case #PB_Shortcut_F9
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '9': *Cursor + 2
-            
-          Case #PB_Shortcut_F10
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '1': *Cursor + 2
-            *Cursor\w = '0': *Cursor + 2
-            
-          Case #PB_Shortcut_F11
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '1': *Cursor + 2
-            *Cursor\w = '1': *Cursor + 2
-            
-          Case #PB_Shortcut_F12
-            *Cursor\w = 'F': *Cursor + 2
-            *Cursor\w = '1': *Cursor + 2
-            *Cursor\w = '2': *Cursor + 2
-            
-          Default
-            If Shortcut > 32 And Shortcut < 127
-              *Cursor\w = Shortcut
-              *Cursor + 2
-            Else
-              Name$ = GetShortcutText(Shortcut) ; stuff like Tab, Space, etc etc
-              PokeS(*Cursor, Name$, -1, #PB_Unicode)
-              *Cursor + StringByteLength(Name$, #PB_Unicode)
-            EndIf
-            
-        EndSelect
-        
-        ; Apply the string to the element
-        ;
-        *CFString = CFStringCreateWithBytes_(#kCFAllocatorDefault, *Buffer, *Cursor-*Buffer, #kCFStringEncodingUnicode, #False)
-        If *CFString
-          SetDataBrowserItemDataText_(itemData, *CFString)
-          CFRelease_(*CFString)
-        EndIf
-        
-        FreeMemory(*Buffer)
-      EndIf
-      
-    Else
-      
-      ; Call the real PB callback for all items that we do not handle here
-      Status = InvokeDataBrowserItemDataUPP_(Gadget, itemID, property, itemData, ChangeValue, RealItemDataCallbackUPP)
-    EndIf
-    
-    ProcedureReturn Status
-  EndProcedure
-  
-  Procedure SetupMacPrefsShortcutCallback()
-    If ItemDataCallbackUPP = 0
-      ItemDataCallbackUPP = NewDataBrowserItemDataUPP_(@MacItemCallback())
-    EndIf
-    
-    If ItemDataCallbackUPP
-      ; Get the PropertyID of the shortcut column for later use
-      If GetDataBrowserTableViewColumnProperty_(GadgetID(#GADGET_Preferences_ShortcutList), 1, @ShortcutColumnProperty) = #noErr ; 2 text columns only
-        Callbacks.DataBrowserCallbacks\version = #kDataBrowserLatestCallbacks                                                    ; in MacExtensions.pb
-        
-        If GetDataBrowserCallbacks_(GadgetID(#GADGET_Preferences_ShortcutList), @Callbacks) = #noErr
-          RealItemDataCallbackUPP    = Callbacks\itemDataCallback
-          Callbacks\itemDataCallback = ItemDataCallbackUPP
-          SetDataBrowserCallbacks_(GadgetID(#GADGET_Preferences_ShortcutList), @Callbacks)
-        EndIf
-      EndIf
-    EndIf
-  EndProcedure
-  
-CompilerEndIf
 
 ;- Default shortcuts
 ; Default shortcuts for the IDE, they are depending of the plateform so put them here
@@ -646,6 +443,7 @@ CompilerIf #CompileLinux | #CompileWindows
   #SHORTCUT_FindNext           = #PB_Shortcut_F3
   #SHORTCUT_FindPrevious       = #PB_Shortcut_Shift | #PB_Shortcut_F3
   #SHORTCUT_FindInFiles        = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_F
+  #SHORTCUT_Replace            = #PB_Shortcut_Control | #PB_Shortcut_H
   #SHORTCUT_NewProject         = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_N
   #SHORTCUT_OpenProject        = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_O
   #SHORTCUT_CloseProject       = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_W
@@ -695,6 +493,10 @@ CompilerIf #CompileLinux | #CompileWindows
   #SHORTCUT_AutoCompleteConfirm= #PB_Shortcut_Tab
   #SHORTCUT_AutoCompleteAbort  = #PB_Shortcut_Escape
   #SHORTCUT_AutoIndent         = #PB_Shortcut_Control | #PB_Shortcut_I
+  #SHORTCUT_UpperCase          = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_U
+  #SHORTCUT_LowerCase          = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_L
+  #SHORTCUT_InvertCase         = #PB_Shortcut_Control | #PB_Shortcut_Shift | #PB_Shortcut_X
+  #SHORTCUT_SelectWord         = 0
 CompilerElse
   ; MacOS default shortcuts
   ;
@@ -720,6 +522,7 @@ CompilerElse
   #SHORTCUT_FindNext           = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_F
   #SHORTCUT_FindPrevious       = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_P
   #SHORTCUT_FindInFiles        = 0
+  #SHORTCUT_Replace            = #PB_Shortcut_Command | #PB_Shortcut_H
   #SHORTCUT_NewProject         = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_N
   #SHORTCUT_OpenProject        = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_O
   #SHORTCUT_CloseProject       = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_W
@@ -763,6 +566,10 @@ CompilerElse
   #SHORTCUT_AutoCompleteConfirm= #PB_Shortcut_Tab                          ; to be tested
   #SHORTCUT_AutoCompleteAbort  = #PB_Shortcut_Escape
   #SHORTCUT_AutoIndent         = #PB_Shortcut_Command | #PB_Shortcut_I
+  #SHORTCUT_UpperCase          = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_U
+  #SHORTCUT_LowerCase          = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_L
+  #SHORTCUT_InvertCase         = #PB_Shortcut_Command | #PB_Shortcut_Shift | #PB_Shortcut_X
+  #SHORTCUT_SelectWord         = 0
 CompilerEndIf
 
 
@@ -794,6 +601,7 @@ DataSection
   Data$ "File", "NewlineLinux":  Data.l 0
   Data$ "File", "NewlineMacOS":  Data.l 0
   ;Data$ "File", "SortSources":   Data.l 0
+  Data$ "File", "ShowInFolder":  Data.l 0
   Data$ "File", "Preferences":   Data.l 0
   Data$ "File", "EditHistory":   Data.l 0
   Data$ "File", "Quit":          Data.l 0
@@ -820,6 +628,7 @@ DataSection
   Data$ "Edit", "FindNext":       Data.l #SHORTCUT_FindNext
   Data$ "Edit", "FindPrevious":   Data.l #SHORTCUT_FindPrevious
   Data$ "Edit", "FindInFiles":    Data.l #SHORTCUT_FindInFiles
+  Data$ "Edit", "Replace":        Data.l #SHORTCUT_Replace
   
   Data$ "Project", "NewProject":         Data.l #SHORTCUT_NewProject
   Data$ "Project", "OpenProject":        Data.l #SHORTCUT_OpenProject
@@ -881,6 +690,7 @@ DataSection
   Data$ "Tools", "ProjectPanel":     Data.l 0
   Data$ "Tools", "Templates":        Data.l 0
   Data$ "Tools", "Diff":             Data.l 0
+  Data$ "Tools", "WebView":          Data.l 0
   Data$ "Tools", "AddTools":         Data.l 0
   
   Data$ "Help", "Help":              Data.l #SHORTCUT_Help
@@ -897,6 +707,10 @@ DataSection
   Data$ "", "MoveLinesDown":       Data.l #SHORTCUT_MoveLinesDown
   Data$ "", "DeleteLines":         Data.l #SHORTCUT_DeleteLines
   Data$ "", "DuplicateSelection":  Data.l #SHORTCUT_DuplicateSelection
+  Data$ "", "UpperCase":           Data.l #SHORTCUT_UpperCase
+  Data$ "", "LowerCase":           Data.l #SHORTCUT_LowerCase
+  Data$ "", "InvertCase":          Data.l #SHORTCUT_InvertCase
+  Data$ "", "SelectWord":          Data.l #SHORTCUT_SelectWord
   Data$ "", "ZoomIn":              Data.l #SHORTCUT_ZoomIn
   Data$ "", "ZoomOut":             Data.l #SHORTCUT_ZoomOut
   Data$ "", "ZoomDefault":         Data.l #SHORTCUT_ZoomDefault

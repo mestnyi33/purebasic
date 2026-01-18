@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 Global NbLanguageGroups, NbLanguageStrings
@@ -346,6 +346,15 @@ Procedure.s Language(Group$, Name$)
     
   EndIf
   
+  CompilerIf #PB_Compiler_Debugger
+    If String$ =  "##### String not found! #####"
+      If Group = 0
+        Debug "[LANGUAGE] Group '" + Group$ + "' wasn't found."
+      EndIf
+      Debug "[LANGUAGE] A string with name '" + Name$ + "' wasn't found in group '" + Group$ + "'."
+    EndIf
+  CompilerEndIf
+  
   ProcedureReturn ReplaceString(String$, "%newline%", #NewLine, #PB_String_NoCase)
 EndProcedure
 
@@ -402,6 +411,7 @@ DataSection
   Data$ "Reload",           "R&eload"
   Data$ "Close",            "&Close"
   Data$ "CloseAll",         "C&lose All"
+  Data$ "ShowInFolder",     "Show in &Folder"
   Data$ "DiffCurrent",      "View chan&ges"
   Data$ "FileFormat",       "F&ile format"
   Data$ "EncodingPlain",    "Encoding: &Plain Text"
@@ -437,6 +447,7 @@ DataSection
   Data$ "FindNext",         "Find &Next"
   Data$ "FindPrevious",     "Find &Previous"
   Data$ "FindInFiles",      "Find &in Files..."
+  Data$ "Replace",          "&Replace..."
   
   Data$ "NewProject",       "&New Project..."
   Data$ "OpenProject",      "&Open Project..."
@@ -505,6 +516,7 @@ DataSection
   Data$ "AsciiTable",       "&Character Table"
   Data$ "Explorer",         "&Explorer"
   Data$ "ProcedureBrowser", "&Procedure Browser"
+  Data$ "WebView",          "&WebView"
   Data$ "Issues",           "&Issue Browser"
   Data$ "Templates",        "&Templates"
   Data$ "ProjectPanel",     "P&roject Panel"
@@ -534,6 +546,9 @@ DataSection
   Data$ "FormLong",         "Form Panel"
   Data$ "HelpToolShort",    "Help"
   Data$ "HelpToolLong",     "Help Tool"
+  
+  Data$ "WebViewShort", "WebView"
+  Data$ "WebViewLong",  "WebView"
   
   Data$ "ColorPicker",      "Color Picker"
   Data$ "Mode_RGB",         "RGB"
@@ -582,6 +597,17 @@ DataSection
   Data$ "MultiFile",        "Show issues of all open files/project files"
   Data$ "Export",           "Export issue list"
   
+  ; For the 'Multicolored Procedure List' and the controls for coloring and scrolling.
+  Data$ "HideModuleNames",	   "Hide module names"
+  Data$ "HighlightProcedure", "Automatically determine and highlight the current procedure"
+  Data$ "ScrollProcedure",		"Automatically scroll to current procedure"
+  Data$ "EnableFolding",		"Enable automatic unfolding of the procedure after the click"
+  Data$ "FrontColor",			"Changing the font color of an entry"
+  Data$ "BackColor",				"Changing the background color of an entry"
+  Data$ "RestoreColor",			"Restore color settings of an entry"
+  Data$ "CopyClipboard",		"Copies the procedure names to the clipboard.  Options: Ctrl = All, Shift = Arguments"
+  Data$ "SwitchButtons",		"Switches the functions"
+  
   ; ===================================================
   ;- Group - FileStuff
   Data$ "_GROUP_",            "FileStuff"
@@ -608,6 +634,8 @@ DataSection
   Data$ "FileExists",       "The file you specified already exists!"
   Data$ "OverWrite",        "Do you want to overwrite it?"
   Data$ "CreateError",      "The file cannot be created!"
+  Data$ "FileIsOpen",       "The file you specified is currently open in the IDE!"
+  Data$ "CloseOverWrite",   "Do you want to close that tab and overwrite it?"
   
   Data$ "SaveConfigError",  "Cannot save Compiler options to file"
   Data$ "Modified",         "The file '%filename%'has been modified.%newline%Do you want to save the changes?"
@@ -750,6 +778,7 @@ DataSection
   Data$ "Email",            "Email"
   Data$ "EnableMenuIcons",  "Display Icons in the Menu"
   Data$ "DisplayFullPath",  "Display full Source Path in TitleBar"
+  Data$ "DisplayDarkMode",  "Enable Dark Mode appearance"
   Data$ "NoSplashScreen",   "Disable Splash Screen"
   
   Data$ "Updates",          "Updates"
@@ -801,15 +830,20 @@ DataSection
   Data$ "EnableBraceMatch", "Enable marking of matching Braces"
   Data$ "EnableKeywordMatch","Enable marking of matching Keywords"
   Data$ "EnableLineNumbers","Display Line numbers"
+  Data$ "EnableAccessibility","Enable accessibility features"
   Data$ "EnableMarkers",    "Enable Line Markers"
   Data$ "ExtraWordChars",   "Extra characters included in word selection"
   Data$ "SelectFont",       "Select Font"
-  Data$ "DefaultColors",    "Default Color Schemes"
+  Data$ "DefaultColors",    "Color Schemes"
   Data$ "ShowWhiteSpace",   "Show whitespace characters"
   Data$ "ShowIndentGuides", "Show indentation guides"
+  Data$ "UseTabIndentForSplittedLines", "Use tab indent for splitted lines"
   
-  
-  Data$ "Color0",           "ASM Keywords"
+  CompilerIf #SpiderBasic
+    Data$ "Color0",         "Inline Javascript"
+  CompilerElse
+    Data$ "Color0",         "ASM Keywords"
+  CompilerEndIf
   Data$ "Color1",           "Background"
   Data$ "Color2",           "Basic Keywords"
   Data$ "Color3",           "Comments"
@@ -904,6 +938,7 @@ DataSection
   Data$ "ProcedureSort",    "Sort Procedures by name"
   Data$ "ProcedureGroup",   "Group Markers"
   Data$ "ProcedurePrototype", "Display Procedure Arguments"
+  Data$ "ProcedureMulticolor", "Multicolored Procedure List"
   
   Data$ "Indent",           "Indentation"
   Data$ "IndentTitle",      "Code Indentation"
@@ -957,7 +992,11 @@ DataSection
   Data$ "Option_Module",    "Modules"
   
   Data$ "Option_PBKeywords",  "Keywords"
-  Data$ "Option_ASMKeywords", "ASM Keywords"
+  CompilerIf #SpiderBasic
+    Data$ "Option_ASMKeywords", "Inline Javascript"
+  CompilerElse
+    Data$ "Option_ASMKeywords", "ASM Keywords"
+  CompilerEndIf
   Data$ "Option_PBFunctions", "Library Functions"
   Data$ "Option_APIFunctions","API Functions"
   Data$ "Option_PBConstants", "Constants"
@@ -1052,31 +1091,38 @@ DataSection
   Data$ "CustomFont",       "Use a custom font"
   Data$ "CustomColors",     "Use custom colors"
   
-  Data$ "Form",             "Form"
-  Data$ "FormVariable",     "New gadgets use #PB_Any by default"
-  Data$ "FormVariableCaption","New gadgets use a variable as caption"
-  Data$ "FormGrid",         "Grid Visible"
-  Data$ "FormEventProcedure","Generate event procedure"
-  Data$ "FormGridSize",     "Grid Size"
-  Data$ "FormSkin",         "OS Skin"
+  Data$ "Form",                "Form"
+  Data$ "FormVariable",        "New gadgets use #PB_Any by default"
+  Data$ "FormVariableCaption", "New gadgets use a variable as caption"
+  Data$ "FormGrid",            "Grid Visible"
+  Data$ "FormEventProcedure",  "Generate event procedure"
+  Data$ "FormGridSize",        "Grid Size"
+  Data$ "FormSkin",            "OS Skin"
+  Data$ "FormWarnings",        "Warnings"
+  Data$ "WarnNotRecognized",   "For an unrecognised file"
+  Data$ "WarnDowngrade",       "For a version downgrade"
+  Data$ "WarnUpgrade",         "For a version upgrade"
+  Data$ "Option_Always",       "Always warn"
+  Data$ "Option_Backward",     "Warn if backward compatibility is affected"
+  Data$ "Option_Never",        "Never warn"
   
-  Data$ "Issues",           "Issues"
-  Data$ "IssueNameShort",   "Name"
-  Data$ "IssueExprShort",   "Expression"
-  Data$ "IssueName",        "Issue name"
-  Data$ "IssueExpr",        "Regular expression"
-  Data$ "IssueCodeNoColor", "No code color"
-  Data$ "IssueCodeBack",    "Change issue background"
-  Data$ "IssueCodeLine",    "Change line background"
-  Data$ "IssueCodeLineLimit","Only up to %limit% issues that change the line background can be defined."
-  Data$ "IssueInTool",      "Show in issue tool"
-  Data$ "IssueInBrowser",   "Show in procedure browser"
-  Data$ "InvalidExpr",      "Invalid regular expression"
+  Data$ "Issues",             "Issues"
+  Data$ "IssueNameShort",     "Name"
+  Data$ "IssueExprShort",     "Expression"
+  Data$ "IssueName",          "Issue name"
+  Data$ "IssueExpr",          "Regular expression"
+  Data$ "IssueCodeNoColor",   "No code color"
+  Data$ "IssueCodeBack",      "Change issue background"
+  Data$ "IssueCodeLine",      "Change line background"
+  Data$ "IssueCodeLineLimit", "Only up to %limit% issues that change the line background can be defined."
+  Data$ "IssueInTool",        "Show in issue tool"
+  Data$ "IssueInBrowser",     "Show in procedure browser"
+  Data$ "InvalidExpr",        "Invalid regular expression"
   
   CompilerIf #SpiderBasic
     Data$ "WebBrowser",  "Web browser"
     Data$ "WebServerPort",  "Default web server port"
-    Data$ "JDK",  "JDK 1.8+ path"
+    Data$ "JDK",  "JDK 17 path (JDK 18+ not supported)"
     Data$ "AppleTeamID",  "AppleTeam ID"
   CompilerEndIf
   
@@ -1091,10 +1137,11 @@ DataSection
   Data$ "CaseSensitive",    "Case Sensitive"
   Data$ "WholeWord",        "Whole Words only"
   Data$ "SelectionOnly",    "Search inside Selection only"
+  Data$ "AutoWrap",         "AutoWrap at end of file"
   Data$ "NoComments",       "Don't search in Comments"
   Data$ "NoStrings",        "Don't search in Strings"
   Data$ "FindNext",         "Find Next"
-  Data$ "FindPrevious",     "Find previous"
+  Data$ "FindPrevious",     "Find Previous"
   Data$ "Replace",          "Replace"
   Data$ "ReplaceAll",       "Replace All"
   
@@ -1231,10 +1278,12 @@ DataSection
   Data$ "EnableDebugger",   "Enable Debugger"
   Data$ "EnablePurifier",   "Enable Purifier"
   Data$ "EnableASM",        "Enable inline ASM syntax coloring"
-  Data$ "EnableXP",         "Enable modern theme support (for Windows XP and above)"
+  Data$ "EnableXP",         "Enable modern theme support (Windows XP and above)"
+  Data$ "EnableWayland",    "Enable Wayland support"
   Data$ "EnableAdmin",      "Request Administrator mode for Windows Vista and above"
   Data$ "EnableUser",       "Request User mode for Windows Vista and above (no virtualisation)"
-  Data$ "DPIAware",         "Enable DPI aware executable (Windows)"
+  Data$ "DllProtection",    "Enable DLL preloading protection (Windows)"
+  Data$ "SharedUCRT",       "Use shared UCRT (Windows 10 and above)"
   Data$ "EnableOnError",    "Enable OnError lines support"
   Data$ "EnableThread",     "Create threadsafe executable"
   Data$ "ExeFormat",        "Executable format"
@@ -1252,9 +1301,9 @@ DataSection
   Data$ "OpenIcon",         "Choose an Icon for the Executable..."
   Data$ "CreateExe",        "Create Executable..."
   Data$ "OpenLinkerFile",   "Choose a file with linker options..."
+  Data$ "Optimizer",      "Optimize generated code"
   
   CompilerIf #SpiderBasic
-    Data$ "OptimizeJS",      "Optimize javascript output"
     Data$ "WindowTheme",     "Theme for windows"
     Data$ "GadgetTheme",     "Theme for gadgets"
     Data$ "WebServerAddress",   "Web server address"
@@ -1263,7 +1312,9 @@ DataSection
     Data$ "ExportCommandLineSuccess", "Post processing tool launched (%commandline%)."
     Data$ "ExportCommandLineError", "Post processing tool can't be launched (%commandline%)."
     Data$ "SourcePattern",   "SpiderBasic Files (*.sb, *.sbi)|*.sb;*.sbi|SpiderBasic Sourcecodes (*.sb)|*.sb|PureBasic Includefiles (*.sbi)|*.sbi|All Files (*.*)|*.*"
+    Data$ "DPIAware",         "Enable DPI aware application"
   CompilerElse
+    Data$ "DPIAware",         "Enable DPI aware executable (Windows and macOS)"
     Data$ "SourcePattern",   "PureBasic Files (*.pb, *.pbi)|*.pb;*.pbi|PureBasic Sourcecodes (*.pb)|*.pb|PureBasic Includefiles (*.pbi)|*.pbi|All Files (*.*)|*.*"
   CompilerEndIf
   
@@ -1393,6 +1444,7 @@ DataSection
     Data$ "SelectResourceDirectory","Select resource directory"
     Data$ "SelectStartupImage" ,"Select a startup image"
     Data$ "EnableDebugger"     ,"Enable debugger"
+    Data$ "KeepAppDirectory"   ,"Keep app directory"
     
     
     ; ===================================================
@@ -1419,23 +1471,28 @@ DataSection
     ; ===================================================
     
     Data$ "Settings",             "Settings"
-    Data$ "NoJDK",                "Path to JDK 1.8+ needs to be set in general Preferences/Compiler to create an Android App."
+    Data$ "NoJDK",                "Path to JDK 17 needs to be set in general Preferences/Compiler to create an Android App."
     Data$ "InvalidJDK",           "Invalid specified JDK directory (needs to be a full JDK, not a JRE)."
     Data$ "InvalidPackageID",     "Invalid specified package id. It should respect the following syntax: domain.yourcompany.appname" + #CR$ + #CR$ +"Each field can only contain ASCII character (a-z, 0-9) and has to start with a lowercase letter character."
     Data$ "Name",                 "App name"
     Data$ "Icon",                 "Icon"
     Data$ "Version",              "Version"
+    Data$ "Code",                 "Code"
     Data$ "IAPKey",               "IAP Key"
     Data$ "PackageID",            "Package ID"
     Data$ "StartupImage",         "Startup image"
+    Data$ "StartupColor",         "Back"
     Data$ "Orientation",          "Orientation"
     Data$ "FullScreen",           "Fullscreen"
-    Data$ "Geolocation",          "Geolocation"
     Data$ "Output",               "Output filename"
     Data$ "AutoUpload",           "Automatically upload on USB connected device (requires enabled debugger)"
     Data$ "ResourceDirectory",    "Resource directory"
     Data$ "WrongOutputExtension", "Android app filename extension needs to be '.apk'"
-    
+    Data$ "InsecureFileMode",     "Enable insecure HTTP support (not recommended)"
+    Data$ "EnableDebugger",       "Enable debugger (no additional '.aab' package will be created)"
+    Data$ "CheckInstall",         "Check Cordova setup"
+    Data$ "DoCheckInstall",       "Do you want to launch the Cordova check ?"
+
     ; ===================================================
     ;- Group - Resources
     Data$ "_GROUP_",            "iOSApp"
@@ -1451,7 +1508,6 @@ DataSection
     Data$ "StartupImage",         "Startup image"
     Data$ "Orientation",          "Orientation"
     Data$ "FullScreen",           "Fullscreen"
-    Data$ "Geolocation",          "Geolocation"
     Data$ "Output",               "Output filename"
     Data$ "AutoUpload",           "Automatically upload on USB connected device"
     Data$ "ResourceDirectory",    "Resource directory"
@@ -1563,6 +1619,9 @@ DataSection
   Data$ "Trigger12",        "Replace FileViewer - Special file"
   Data$ "Trigger13",        "Sourcecode closed"
   Data$ "Trigger14",        "New Sourcecode created"
+  Data$ "Trigger15",        "Open File - with specific extension"
+  Data$ "Trigger16",        "Open File - non-PB binary file"
+  Data$ "Trigger17",        "Open File - non-PB text file"
   
   Data$ "Argument1",        "%PATH : Path of the current source. Empty if the source wasn't saved yet."
   Data$ "Argument2",        "%FILE : Filename and Path of the current source. Empty if it wasn't saved yet."
@@ -1602,6 +1661,10 @@ DataSection
   Data$ "MoveLinesDown",    "Move selected lines down"
   Data$ "DeleteLines",      "Delete selected lines"
   Data$ "DuplicateSelection","Duplicate selection"
+  Data$ "UpperCase",        "Upper Case selection"
+  Data$ "LowerCase",        "Lower Case selection"
+  Data$ "InvertCase",       "Invert Case selection"
+  Data$ "SelectWord",       "Select whole word at cursor"
   Data$ "ZoomIn",           "Zoom in"
   Data$ "ZoomOut",          "Zoom out"
   Data$ "ZoomDefault",      "Zoom default"
@@ -1611,6 +1674,7 @@ DataSection
   Data$ "ProceduresUpdate", "Trigger Update of Procedure & Variable Viewer"
   
   Data$ "AllreadyUsed",     "The shortcut you specified is already used by" ; DO NOT FIX TYPO: AllreadyUsed
+  Data$ "ReassignPrompt",   "Should the shortcut be reassigned?"
   Data$ "ExternalTool",     "External Tool"
   Data$ "Menu",             "Menu"
   Data$ "TabIntend",        "Indent/Unindent code Selection"
@@ -1942,7 +2006,7 @@ DataSection
   Data$ "_GROUP_",            "StandaloneDebugger"
   ; ===================================================
   
-  Data$ "CommandLine",      "Invalid commandline!%newline%You have to specify the executable name or one of the network options on the commandline."
+  Data$ "CommandLine",      "Invalid commandline!%newline%You have to specify the executable name on the commandline."
   Data$ "CommandFile",      "Cannot read command file '%filename%'."
   Data$ "ExecuteError",     "Cannot execute file '%filename%'."
   Data$ "Run",              "Run"
@@ -2027,7 +2091,11 @@ DataSection
   Data$ "ToolbarError",     "Could not find Toolbar Icon"
   Data$ "AutomationTimeout","An Automation client failed to respond to communication.%newline%The connection will be terminated."
   Data$ "Welcome",          "Welcome aboard !"
+  Data$ "AskScreenReader",  "A Screen Reader software was detected. Do you wish to enable accessibility features?%newline%%newline%(You can change this option later under File - Preferences - General)"
   
+  Data$ "ImageManagerTitle","Image Manager"
+  Data$ "MessageContinue",   "Do you want to continue?"
+
   
   ; ===================================================
   ;- Group - Form
@@ -2045,6 +2113,15 @@ DataSection
   Data$ "Separator",          "Separator"
   Data$ "Shortcut",           "Shortcut"
   Data$ "OutOfMemoryError",   "Can't render gadget of %size% pixels (out of memory)."
+  Data$ "N/A",                "N/A"
+  
+  Data$ "MessageNewer",       "This file was created with a newer version of the designer (%s%).%newline%Any unsupported features may be lost."
+  Data$ "MessageOlder",       "This file was created with an older version of the designer (%s%) and will be upgraded to the current version."
+  Data$ "MessageBackward",    "This file was created with an older version of the designer (%s%).%newline%Backward compatibility may be affected if upgraded."
+  Data$ "MessageNotDesign",   "This file does not appear to contain a form design.%newline%The content may not be imported properly."
+  Data$ "Option_Always",      "Always"
+  Data$ "Option_Backward",    "If backward compatibility is affected"
+  Data$ "Option_Never",       "Never"
   
   ;Data$ "_GROUP_",            "StatusWindow"
   ; ===================================================
@@ -2075,13 +2152,14 @@ DataSection
   
   ;Data$ "_GROUP_",            "SplitterWindow"
   ; ===================================================
-  Data$ "FirstGadget",      "First gadget:"
-  Data$ "SecondGadget",     "Second gadget:"
-  Data$ "StartDrawing",     "Start drawing"
-  Data$ "Cancel",           "Cancel"
-  Data$ "OK",               "OK"
-  Data$ "SelectError",      "You need to select two different gadgets."
-  Data$ "GadgetListError",  "The two gadgets need to belong to the same gadget list."
+  Data$ "CreateSplitterTitle",  "Create Splitter"
+  Data$ "FirstGadget",          "First gadget:"
+  Data$ "SecondGadget",         "Second gadget:"
+  Data$ "StartDrawing",         "Start drawing"
+  Data$ "Cancel",               "Cancel"
+  Data$ "OK",                   "OK"
+  Data$ "SelectError",          "You need to select two different gadgets."
+  Data$ "GadgetListError",      "The two gadgets need to belong to the same gadget list."
   
   ;Data$ "_GROUP_",            "HelpingFunctions"
   ; ===================================================
@@ -2136,6 +2214,10 @@ DataSection
   
   ;Data$ "_GROUP_",            "Window"
   ; ===================================================
+  Data$ "ParentTitle",          "Set Parent For '%id%'"
+  Data$ "EditItemsTitle",       "Edit Items For '%id%'"
+  Data$ "EditColumnsTitle",     "Edit Columns For '%id%'"
+  
   Data$ "SelectEventFileFirst", "You need to select an event file first."
   Data$ "CreateEventFile",      "The file doesn't exist - do you want to create it?"
   Data$ "FileAlreadyOpened",    "This file is already opened."
@@ -2182,6 +2264,18 @@ DataSection
   Data$ "Paste",                "Paste"
   Data$ "Duplicate",            "Duplicate"
   Data$ "AddItem",              "Add Item"
+  Data$ "AddButton",            "Add Button"
+  Data$ "AddToggle",            "Add Toggle Button"
+  Data$ "AddImage",             "Add Image"
+  Data$ "AddLabel",             "Add Label"
+  Data$ "AddSeparator",         "Add Separator"
+  Data$ "AddProgressBar",       "Add ProgressBar"
+  Data$ "DeleteToolbar",        "Delete Toolbar"
+  Data$ "DeleteToolbarItem",    "Delete Toolbar Item"
+  Data$ "DeleteStatusBar",      "Delete StatusBar"
+  Data$ "DeleteField",          "Delete Field"
+  Data$ "DeleteMenu",           "Delete Menu"
+  Data$ "DeleteMenuItem",       "Delete Menu Item"
   Data$ "EditItems",            "Edit Items"
   Data$ "EditColumns",          "Edit Columns"
   Data$ "AllForms",             "All Forms"
@@ -2214,7 +2308,9 @@ DataSection
   Data$ "Remove",               "Remove"
   Data$ "Parent",               "Parent"
   Data$ "ParentItem",           "Parent Item"
+  Data$ "CustomFlags",          "Custom Flags"
   
+ 
   ; ===================================================
   ;- Group - Updates
   Data$ "_GROUP_",            "Updates"

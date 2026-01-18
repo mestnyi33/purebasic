@@ -1,0 +1,161 @@
+#!/bin/bash
+
+echo ""
+echo "--------------------------------------------"
+echo "Compilation of a new PureBasic IDE for MacOS"
+echo "--------------------------------------------"
+echo ""
+
+# ----- Set base folder to receive files of new PureBasic IDE (default: home folder)
+
+BaseFolder=~
+
+# ----- Set folder containing current PureBasic installation
+
+PBAppFolder="/Your_path_to_your_PureBasic_installation"
+
+# ----- Check if 1st script parameter contains PureBasic installation folder
+
+if [ "$1" != "" ]; then
+  PBAppFolder="$1"
+fi
+
+# ----- If no valid PureBasic installation folder is specified (either as the 1st
+#       parameter of the script's start command or in the declaration above) or
+#       the specified folder doesn't contain the PureBasic.app, keep asking the
+#       user for a valid folder name
+
+if [ -d "$PBAppFolder" ]; then
+  PBApp=$(ls -d "$PBAppFolder"/*.app)
+fi
+
+until [ -d "$PBApp" ]
+do
+  echo "Please type in the path to your PureBasic installation:"
+  read PBAppFolder
+
+  if [ ! -d "$PBAppFolder" ]; then
+    echo ""
+    echo "Sorry, but the folder"
+    echo "$PBAppFolder"
+    echo "does not exist!"
+    echo ""
+  else
+    PBApp=$(ls -d "$PBAppFolder"/*.app 2> /dev/null)
+
+    if [ ! -d "$PBApp" ]; then
+      echo ""
+      echo "Sorry, but the folder"
+      echo "$PBAppFolder"
+      echo "does not contain the PureBasic app!"
+      echo ""
+    fi
+  fi
+done
+
+# ----- Get path to PB compiler
+
+PBCompiler="$PBApp/Contents/Resources/compilers/pbcompiler"
+
+# ----- Evaluate PB version
+
+PBVersion=$("$PBCompiler" -v | cut -d " " -f2)
+
+if [ "$(echo $PBVersion | cut -c 3)" == "4" ]; then
+  if [ "$PBVersion" \< "5.44" ]; then
+    echo ""
+    echo "Compilation cancelled!"
+    echo "You need at least PB 5.44-5.46 or PB 5.51 and above to compile the IDE!"
+    echo ""
+    exit
+  fi
+else
+  if [ "$PBVersion" \< "5.51" ]; then
+    echo ""
+    echo "Compilation cancelled!"
+    echo "You need at least PB 5.44-5.46 or PB 5.51 and above to compile the IDE!"
+    echo ""
+    exit    
+  fi
+fi
+
+# ----- Get bit type of PB compiler
+
+BitType=$("$PBCompiler" -v | cut -d "-" -f2 | cut -c 2-4)
+
+# ----- Get Xcode major version
+
+XcodeMajorVersion=$(xcodebuild -version | grep Xcode | cut -d" " -f2 | cut -d. -f1)
+
+if [ "${#XcodeMajorVersion}" -gt "1" ]; then
+  if [ "$BitType" == "x86" ]; then
+    # ----- If Xcode version is 10 or higher, a 32 bit compilation isn't possible
+    #       anymore!)
+
+    echo ""
+    echo "Compilation cancelled!"
+    echo "Unfortunately it is not possible anymore to compile a 32 bit PureBasic IDE"
+    echo "with an Xcode version of 10 or higher!"
+    echo "Please use a 64 bit PureBasic compiler for compilation."
+    echo ""
+    exit
+  fi
+fi
+
+# ----- Generate folder name to contain new file PureBasic.app
+
+PBTargetFolder=PB$PBVersion"-"$BitType
+
+# ----- Create installation folder for compilation of PureBasic IDE
+
+cd $BaseFolder
+mkdir PureBasic-IDE
+cd PureBasic-IDE
+
+# ----- Download archive purebasic-master.zip from GitHub
+
+echo "Downloading PureBasic IDE from GitHub"
+curl -L0k https://github.com/fantaisie-software/purebasic/archive/master.zip -o purebasic-master.zip
+
+# ----- Unzip purebasic-master.zip
+
+unzip -q purebasic-master.zip
+
+# ----- Create new folder to contain new file PureBasic.app
+
+cd purebasic-master
+mkdir $PBTargetFolder
+
+# ----- Copy contents of the folder Resources from current PB installation to
+#       target folder of new PureBasic IDE
+
+cp -Rp "$PBApp/Contents/Resources/" $PBTargetFolder"/"
+
+# ----- Export path of new PureBasic home folder
+
+export PUREBASIC_HOME=$BaseFolder/PureBasic-IDE/purebasic-master/$PBTargetFolder
+
+# ----- Export settings contained in OSX-x64.bash
+
+export PB_PROCESSOR=X$(echo $BitType | cut -c 2-3)
+export PB_COCOA=1
+export PB_LIBRARIES="$PWD/Libraries"
+export PB_BUILDTARGET=$PWD/Build/$BitType
+export PATH="$PUREBASIC_HOME/compilers:$PUREBASIC_HOME/sdk/pureunit:/sw/bin:$PATH"
+
+# ----- Create Build folder
+
+mkdir -p Build/$BitType
+
+# ----- Start script EnvironmentVariables.bash
+
+. $PB_LIBRARIES/EnvironmentVariables.bash OSX
+
+# ----- Start compilation of PureBasic IDE
+
+cd PureBasicIDE
+make
+
+# ----- Start new compiled PureBasic IDE
+
+../$PBTargetFolder/PureBasic.app/Contents/MacOS/PureBasic &

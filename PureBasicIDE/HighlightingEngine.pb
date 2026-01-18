@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 CompilerIf Not Defined(SpiderBasic, #PB_Constant)
@@ -18,20 +18,6 @@ CompilerIf Not Defined(MaxSizeHT, #PB_Constant)
     #MaxSizeHT = 255
   CompilerEndIf
 CompilerEndIf
-
-
-CompilerIf Not Defined(StringToAscii, #PB_Procedure)
-  Procedure StringToAscii(String$)
-
-    *Buffer = AllocateMemory(StringByteLength(String$, #PB_Ascii) + 1)
-    If *Buffer
-      PokeS(*Buffer, String$, -1, #PB_Ascii)
-    EndIf
-
-    ProcedureReturn *Buffer
-  EndProcedure
-CompilerEndIf
-
 
 
 ; the following are repeated declarations, for the case
@@ -141,9 +127,9 @@ Global SourceStringFormat
 Global NbASMKeywords.l ; Need to be a 'long' as the 'Data' is declared as long (32/64 bits)
 
 CompilerIf #SpiderBasic
-  #NbBasicKeywords = 95
+  #NbBasicKeywords = 98
 CompilerElse
-  #NbBasicKeywords = 111
+  #NbBasicKeywords = 114
 CompilerEndIf
 
 #BasicTypeChars = "ABCUWLSFDQI" ; characters that are basic types (uppercase)
@@ -159,11 +145,6 @@ Global Dim CustomKeywordsHT.l(#MaxSizeHT)
 Global NbCustomKeywords
 
 
-Global Dim ConstantList.S(0)   ; from StructureViewer, but works also if not included (ConstantListSize will simply be 0)
-Global Dim ConstantHT.L(27, 1)
-Global ConstantListSize
-
-
 Global Dim ASMKeywordsHT.l(#MaxSizeHT)
 
 Global Dim APIFunctionsHT.l(#MaxSizeHT)
@@ -171,6 +152,27 @@ Global NewMap BasicFunctionMap.l(4096)
 
 Global BasicKeyword$, ASMKeyword$, KnownConstant$, CustomKeyword$
 Global NbBasicFunctions, NbApiFunctions
+
+CompilerIf Defined(PUREBASIC_IDE, #PB_Constant)
+  
+  Global BasicKeywordsTree.RadixTree   ; Stores index in array (not "index+1" since index 0 is invalid anyway)
+  Global ASMKeywordsTree.RadixTree     ; Stores index in array (not "index+1"!)
+  Global BasicFunctionsTree.RadixTree  ; Stores index+1
+  Global APIFunctionsTree.RadixTree    ; Stores index+1
+  
+  ; Redeclared from StructureViewer.pb
+  Global Dim ConstantList.s(0)
+  Global ConstantTree.RadixTree
+  
+CompilerElse
+  ; Replace functions that only have meaning in the IDE
+  Macro RadixInsert(a, b, c)
+  EndMacro
+  
+  Macro RadixFree(x)
+  EndMacro
+CompilerEndIf
+
 
 ;- Keyword constants
 ;
@@ -222,10 +224,10 @@ Enumeration 1
   CompilerEndIf
   #KEYWORD_DisableDebugger
   #KEYWORD_DisableExplicit
-  CompilerIf #SpiderBasic
-    #KEYWORD_DisableJS
+  CompilerIf #SpiderBasic ; It's EnableJS in SpiderBasic, so it needs to be put there as it's alpha-sorted !
+    #KEYWORD_DisableASM
   CompilerEndIf
-
+  #KEYWORD_DisablePureLibrary
   #KEYWORD_Else
   #KEYWORD_ElseIf
   CompilerIf Not #SpiderBasic
@@ -233,13 +235,14 @@ Enumeration 1
   CompilerEndIf
   #KEYWORD_EnableDebugger
   #KEYWORD_EnableExplicit
-  CompilerIf #SpiderBasic
-    #KEYWORD_EnableJS
+  CompilerIf #SpiderBasic ; It's EnableJS in SpiderBasic, so it needs to be put there as it's alpha-sorted !
+    #KEYWORD_EnableASM
   CompilerEndIf
   #KEYWORD_End
   #KEYWORD_EndDataSection
   #KEYWORD_EndDeclareModule
   #KEYWORD_EndEnumeration
+  #KEYWORD_EndHeaderSection
   #KEYWORD_EndIf
   #KEYWORD_EndImport
   #KEYWORD_EndInterface
@@ -268,6 +271,8 @@ Enumeration 1
     #KEYWORD_Gosub
     #KEYWORD_Goto
   CompilerEndIf
+  
+  #KEYWORD_HeaderSection
 
   #KEYWORD_If
   #KEYWORD_Import
@@ -445,7 +450,12 @@ CompilerIf Defined(PUREBASIC_IDE, #PB_Constant)
 
     ; scan for issues
     ; remove the ';' from the scanned string
-    Comment$ = PeekS(*StringStart+1, *LineEnd - *StringStart, SourceStringFormat)
+    If StringFormat = #PB_UTF8
+      Comment$ = PeekS(*StringStart+1, *LineEnd-*StringStart, StringFormat | #PB_ByteLength) ; #PB_ByteLength is only valid for UTF8
+    Else
+      Comment$ = PeekS(*StringStart+1, *LineEnd-*StringStart, StringFormat)
+    EndIf
+    
     ScanCommentIssues(Comment$, Found(), #True) ; highlight mode
 
     ; add them one by one (and manage space in between)
@@ -546,6 +556,7 @@ Procedure InitSyntaxCheckArrays()
   ; Now, init the internal PureBasic keywords
   ; can be done here, as it does not need the compiler
   ;
+  RadixFree(BasicKeywordsTree)
   CurrentChar = 0
   Restore BasicKeywords
   For k=1 To #NbBasicKeywords
@@ -553,6 +564,7 @@ Procedure InitSyntaxCheckArrays()
     BasicKeywords(k) = LCase(BasicKeywordsReal(k))
     Read.s BasicKeywordsEndKeywords(k)
     Read.s BasicKeywordsSpaces(k)
+    RadixInsert(BasicKeywordsTree, BasicKeywordsReal(k), k)
 
     Char = Asc(BasicKeywords(k))
     If Char <> CurrentChar
@@ -571,6 +583,7 @@ Procedure InitSyntaxCheckArrays()
   ; And next, init the ASM keywords
   ;
   CurrentChar = 0
+  RadixFree(ASMKeywordsTree)
   Restore ASMKeywords
 
   Read.l NbASMKeywords
@@ -579,6 +592,7 @@ Procedure InitSyntaxCheckArrays()
 
   For k=1 To NbASMKeywords
     Read.s ASMKeywords(k)
+    RadixInsert(ASMKeywordsTree, ASMKeywords(k), k)
 
     Char = Asc(ASMKeywords(k))
     If Char <> CurrentChar
@@ -612,6 +626,7 @@ Procedure InitSyntaxHighlighting()
       NbBasicFunctions = Val(Response$)
       If NbBasicFunctions < 10000 And NbBasicFunctions > 0  ; Sanity check... If over, it's a bit strange...
         Dim BasicFunctions.FunctionEntry(NbBasicFunctions)
+        RadixFree(BasicFunctionsTree)
 
         CurrentFunction = 0
         Repeat
@@ -639,11 +654,12 @@ Procedure InitSyntaxHighlighting()
         ; PB compare functions so our hashing stops working
         ; So we add a sort step here to be sure
         SortStructuredArray(BasicFunctions(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(FunctionEntry\Name$), #PB_String, 0, NbBasicFunctions-1)
-
+                
         ; Do the conversion to ascii now, as our pointer field is wrong else!
         For i = 0 To NbBasicFunctions-1
           PokeS(@BasicFunctions(i)\AsciiBuffer[0], BasicFunctions(i)\Name$, 255, #PB_Ascii)
           BasicFunctions(i)\Ascii = @BasicFunctions(i)\AsciiBuffer[0]
+          RadixInsert(BasicFunctionsTree, BasicFunctions(i)\Name$, i+1)
         Next i
 
       EndIf
@@ -655,6 +671,7 @@ Procedure InitSyntaxHighlighting()
 
   ; PureBasic function Hash Table
   ;
+  ClearMap(BasicFunctionMap())
   For k=1 To NbBasicFunctions
     BasicFunctionMap(UCase(BasicFunctions(k-1)\Name$)) = k
   Next
@@ -667,6 +684,7 @@ Procedure InitSyntaxHighlighting()
 
     NbAPIFunctions = 0
     Global Dim APIFunctions.FunctionEntry(0)
+    RadixFree(APIFunctionsTree)
 
     ; Only load these files when we are inside the IDE or debugger
     ;
@@ -730,6 +748,7 @@ Procedure InitSyntaxHighlighting()
           For i = 0 To NbAPIFunctions-1
             PokeS(@APIFunctions(i)\AsciiBuffer[0], APIFunctions(i)\Name$, 255, #PB_Ascii)
             APIFunctions(i)\Ascii = @APIFunctions(i)\AsciiBuffer[0]
+            RadixInsert(APIFunctionsTree, APIFunctions(i)\Name$, i+1)
           Next i
 
           FreeMemory(*APIFunctionsBuffer)
@@ -913,7 +932,7 @@ Procedure IsCustomKeyword(Word$)
   If k
     While Quit = 0 And k <= NbCustomKeywords
 
-      Compare = CompareMemoryString(@CustomKeywords(k), @Word$, #PB_String_NoCase)  ; Case insensitive compare
+      Compare = CompareMemoryString(@CustomKeywords(k), @Word$, #PB_String_NoCaseAscii)  ; Case insensitive compare
 
       If Compare <= 0
         If Compare = 0
@@ -934,28 +953,24 @@ EndProcedure
 
 
 Procedure IsKnownConstant(Word$)
-  ascii = Asc(UCase(Mid(Word$, 2, 1))) ; the word is guaranteed to be longer that that (checked below)
-  If ascii = '_'
-    char = 27
-  ElseIf ascii >= 'A' And ascii <= 'Z'
-    char = ascii - 'A' + 1
-  Else
-    ProcedureReturn 0
-  EndIf
-
-  For i = ConstantHT(char, 0) To ConstantHT(char, 1)
-    If CompareMemoryString(@Word$, @ConstantList(i), #PB_String_NoCase) = 0
-      KnownConstant$ = ConstantList(i)
+  
+  CompilerIf Defined(PUREBASIC_IDE, #PB_Constant)
+    
+    Match = RadixLookupValue(ConstantTree, Word$)
+    If Match
+      KnownConstant$ = ConstantList(Match-1) ; The tree stores index+1
       ProcedureReturn 1
     EndIf
-  Next i
-
+    
+  CompilerEndIf
+    
+  ProcedureReturn 0
 EndProcedure
 
 ; for detection. use global so it does not need to be done all the time
-Global *KeywordStructure = StringToAscii("Structure") ; Don't use ToAscii as it use a single buffer
-Global *KeywordInterface = StringToAscii("Interface")
-Global *KeywordExtends   = StringToAscii("Extends")
+Global *KeywordStructure = Ascii("Structure") ; Don't use ToAscii as it use a single buffer
+Global *KeywordInterface = Ascii("Interface")
+Global *KeywordExtends   = Ascii("Extends")
 
 ; returns true if the current position is after
 ; a structure or interface keyword
@@ -993,13 +1008,13 @@ Procedure IsAfterStructure(Keyword, *LineStart, *Cursor.HighlightPTR)
   EndIf
 
   Length = *WordEnd - *Cursor
-  If Length = 9 And CompareMemoryString(*Cursor, *KeywordStructure, #PB_String_NoCase, 9, #PB_Ascii) = #PB_String_Equal
+  If Length = 9 And CompareMemoryString(*Cursor, *KeywordStructure, #PB_String_NoCaseAscii, 9, #PB_Ascii) = #PB_String_Equal
     ; extends/align on structure
     ProcedureReturn #True
-  ElseIf Keyword = #KEYWORD_Extends And Length = 9 And CompareMemoryString(*Cursor, *KeywordInterface, #PB_String_NoCase, 9, #PB_Ascii) = #PB_String_Equal
+  ElseIf Keyword = #KEYWORD_Extends And Length = 9 And CompareMemoryString(*Cursor, *KeywordInterface, #PB_String_NoCaseAscii, 9, #PB_Ascii) = #PB_String_Equal
     ; extends on interface (no align allowed)
     ProcedureReturn #True
-  ElseIf Keyword = #KEYWORD_Align And Length = 7 And CompareMemoryString(*Cursor, *KeywordExtends, #PB_String_NoCase, 7, #PB_Ascii) = #PB_String_Equal
+  ElseIf Keyword = #KEYWORD_Align And Length = 7 And CompareMemoryString(*Cursor, *KeywordExtends, #PB_String_NoCaseAscii, 7, #PB_Ascii) = #PB_String_Equal
     ; align after extends (Structure X Extends Y Align Z is allowed)
     ProcedureReturn #True
   Else
@@ -1106,7 +1121,7 @@ EndProcedure
 #SkipSeparator = -2
 #ModuleSeparator = -2
 
-Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback.HighlightCallback, IsSourceCode)
+Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback.HighlightCallback, IsSourceCode, DisableFormatting = 0)
 
   *Cursor.HighlightPTR = *InBuffer
   *InBufferEnd = *InBuffer + InBufferLength
@@ -1208,13 +1223,13 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
     If IsCustomKeyword(WordStart$) And OldSeparatorChar <> '\'
 
       ; -------------------- Custom Keyword -------------------------
-      If EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
+      If DisableFormatting = #False And EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
         TextChanged = CopyMemoryCheck(ToAscii(CustomKeyword$), *WordStart, Len(CustomKeyword$)) ; no PokeS() as it will write a 0!
       Else
         TextChanged = 0
       EndIf
 
-      If EnableKeywordBolding ; special fix for the alignment issues. for bolded keywords, we output all whitespace as "normal text"
+      If DisableFormatting = #False And EnableKeywordBolding ; special fix for the alignment issues. for bolded keywords, we output all whitespace as "normal text"
         Callback(*StringStart, *WordStart- *StringStart, *NormalTextColor, 0, 0)
         Callback(*WordStart  , *WordEnd  - *WordStart  , *CustomKeywordColor, 1, TextChanged)
         Callback(*WordEnd    , *Cursor   - *WordEnd    , *NormalTextColor, 0, 0)
@@ -1236,19 +1251,28 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
       ; -------------------- Basic Keywords -------------------------
 
       ; do not correct the word the user is currently typing, because it will change the case of any word that starts with a PB keyword, which is not good
-      If EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
+      If DisableFormatting = #False And EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
         TextChanged = CopyMemoryCheck(ToAscii(BasicKeyword$), *WordStart, Len(BasicKeyword$)) ; no PokeS() as it will write a 0!
       Else
         TextChanged = 0
       EndIf
 
-      If EnableKeywordBolding ; special fix for the alignment issues. for bolded keywords, we output all whitespace as "normal text"
+      If DisableFormatting = #False And EnableKeywordBolding ; special fix for the alignment issues. for bolded keywords, we output all whitespace as "normal text"
         Callback(*StringStart, *WordStart- *StringStart, *NormalTextColor, 0, 0)
         Callback(*WordStart  , *WordEnd  - *WordStart  , *BasicKeywordColor, 1, TextChanged)
         Callback(*WordEnd    , *Cursor   - *WordEnd    , *NormalTextColor, 0, 0)
       Else
         Callback(*StringStart, *Cursor - *StringStart, *BasicKeywordColor, 0, TextChanged)
       EndIf
+      
+      ; When loading a file, the whole buffer is scanned at once, so detect the EnableJS/DisableJS live, to modify the formatting flag
+      Select LCase(BasicKeyword$)
+        Case BasicKeywords(#KEYWORD_EnableASM), BasicKeywords(#KEYWORD_HeaderSection)
+          DisableFormatting = #True
+          
+        Case BasicKeywords(#KEYWORD_DisableASM), BasicKeywords(#KEYWORD_EndHeaderSection)
+          DisableFormatting = #False
+      EndSelect
 
     ElseIf SeparatorChar = ':' And *Cursor\a[1] = ':'
 
@@ -1280,7 +1304,7 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
       FunctionPosition = IsAPIFunction(*WordStart, WordLength)
       If FunctionPosition > -1
 
-        If EnableCaseCorrection
+        If DisableFormatting = #False And EnableCaseCorrection
           TextChanged = CopyMemoryCheck(APIFunctions(FunctionPosition)\Ascii, *WordStart, WordLength-1)
         EndIf
 
@@ -1288,7 +1312,7 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
         FunctionPosition = IsBasicFunction(UCase(WordStart$))
         If FunctionPosition > -1
 
-          If EnableCaseCorrection And OldSeparatorChar <> '.' ; do not correct structure names
+          If DisableFormatting = #False And EnableCaseCorrection And OldSeparatorChar <> '.' ; do not correct structure names
             TextChanged = CopyMemoryCheck(BasicFunctions(FunctionPosition)\Ascii, *WordStart, WordLength)
           EndIf
 
@@ -1326,7 +1350,7 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
       ; -------------------- ASM Keywords ---------------------------
 
       ; do not correct the word the user is currently typing, because it will change the case of any word that starts with a PB keyword, which is not good
-      If EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
+      If DisableFormatting = #False And EnableCaseCorrection And (CursorPosition = 0 Or CursorPosition < *WordStart-*InBuffer Or CursorPosition > *WordEnd-*InBuffer)
         TextChanged = CopyMemoryCheck(ToAscii(ASMKeyword$), *WordStart, WordLength) ; no PokeS() as it will write a 0!
         Callback(*StringStart, *Cursor-*StringStart, *ASMKeywordColor, 0, TextChanged)
       Else
@@ -1380,35 +1404,35 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
 
           ; special cases for p-ascii, p-unicode, p-bstr
           ;
-        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-8 And CompareMemoryString(*Cursor, ToAscii(".p-ascii"), #PB_String_NoCase, 8, #PB_Ascii) = 0
+        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-8 And CompareMemoryString(*Cursor, ToAscii(".p-ascii"), #PB_String_NoCaseAscii, 8, #PB_Ascii) = 0
           Callback(*StringStart, *Cursor-*StringStart, *NormalTextColor, 0, 0)
           Callback(*Cursor, 1, *SeparatorColor, 0, 0)
           Callback(*Cursor+1, 7, *NormalTextColor, 0, 0)
           *Cursor + 8
           SeparatorChar = #SkipSeparator
 
-        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-10 And CompareMemoryString(*Cursor, ToAscii(".p-unicode"), #PB_String_NoCase, 10, #PB_Ascii) = 0
+        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-10 And CompareMemoryString(*Cursor, ToAscii(".p-unicode"), #PB_String_NoCaseAscii, 10, #PB_Ascii) = 0
           Callback(*StringStart, *Cursor-*StringStart, *NormalTextColor, 0, 0)
           Callback(*Cursor, 1, *SeparatorColor, 0, 0)
           Callback(*Cursor+1, 9, *NormalTextColor, 0, 0)
           *Cursor + 10
           SeparatorChar = #SkipSeparator
 
-        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-7 And CompareMemoryString(*Cursor, ToAscii(".p-bstr"), #PB_String_NoCase, 7, #PB_Ascii) = 0
+        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-7 And CompareMemoryString(*Cursor, ToAscii(".p-bstr"), #PB_String_NoCaseAscii, 7, #PB_Ascii) = 0
           Callback(*StringStart, *Cursor-*StringStart, *NormalTextColor, 0, 0)
           Callback(*Cursor, 1, *SeparatorColor, 0, 0)
           Callback(*Cursor+1, 6, *NormalTextColor, 0, 0)
           *Cursor + 7
           SeparatorChar = #SkipSeparator
 
-        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-10 And CompareMemoryString(*Cursor, ToAscii(".p-variant"), #PB_String_NoCase, 10, #PB_Ascii) = 0
+        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-10 And CompareMemoryString(*Cursor, ToAscii(".p-variant"), #PB_String_NoCaseAscii, 10, #PB_Ascii) = 0
           Callback(*StringStart, *Cursor-*StringStart, *NormalTextColor, 0, 0)
           Callback(*Cursor, 1, *SeparatorColor, 0, 0)
           Callback(*Cursor+1, 9, *NormalTextColor, 0, 0)
           *Cursor + 10
           SeparatorChar = #SkipSeparator
 
-        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-7 And CompareMemoryString(*Cursor, ToAscii(".p-utf8"), #PB_String_NoCase, 7, #PB_Ascii) = 0
+        ElseIf NextWord$ = "P" And *Cursor < *InBufferEnd-7 And CompareMemoryString(*Cursor, ToAscii(".p-utf8"), #PB_String_NoCaseAscii, 7, #PB_Ascii) = 0
           Callback(*StringStart, *Cursor-*StringStart, *NormalTextColor, 0, 0)
           Callback(*Cursor, 1, *SeparatorColor, 0, 0)
           Callback(*Cursor+1, 6, *NormalTextColor, 0, 0)
@@ -1437,10 +1461,10 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
 
       If SeparatorChar = '!' And IsLineStart(*LineStart, *Cursor)
 
-        ; --------------------- ASM Line with "!" ---------------------
+        ; --------------------- ASM or C Line with "!" ---------------------
 
-        *StringStart = *Cursor ; highlight to lineend or comment
-        While *Cursor < *InBufferEnd And *Cursor\b <> ';' And *Cursor\b <> 10 And *Cursor\b <> 13 And *Cursor\b
+        *StringStart = *Cursor ; highlight to lineend (do not stop on comment as ASM and C are different here)
+        While *Cursor < *InBufferEnd And *Cursor\b <> 10 And *Cursor\b <> 13 And *Cursor\b
           *Cursor + 1
         Wend
 
@@ -1603,7 +1627,7 @@ Procedure HighlightingEngine(*InBuffer, InBufferLength, CursorPosition, Callback
         EndIf
 
         ; also do not correct case here if the cursor is over the word
-        If EnableCaseCorrection And ConstantListSize > 0 And *Cursor > *StringStart + 1 And IsKnownConstant(PeekAsciiLength(*StringStart, *Cursor-*StringStart)) And (CursorPosition = 0 Or CursorPosition < *StringStart-*InBuffer Or CursorPosition > *Cursor-*InBuffer)
+        If DisableFormatting = #False And EnableCaseCorrection And ConstantListSize > 0 And *Cursor > *StringStart + 1 And IsKnownConstant(PeekAsciiLength(*StringStart, *Cursor-*StringStart)) And (CursorPosition = 0 Or CursorPosition < *StringStart-*InBuffer Or CursorPosition > *Cursor-*InBuffer)
           TextChanged = CopyMemoryCheck(ToAscii(KnownConstant$), *StringStart, Len(KnownConstant$))
           Callback(*StringStart, *Cursor-*StringStart, *ConstantColor, 0, TextChanged) ; don't include the current char!
         Else

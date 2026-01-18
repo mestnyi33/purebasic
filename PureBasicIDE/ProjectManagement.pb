@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 
 
@@ -579,7 +579,12 @@ EndProcedure
 ; Apply preferences changes
 Procedure UpdateProjectInfoPreferences()
   If *ProjectInfo
-    SetTabBarGadgetItemText(#GADGET_FilesPanel, 0, "> " + Language("Project","TabTitle"))
+    
+    ; Find Project tab (position may have changed!) and update its text
+    PushListPosition(FileList())
+    ChangeCurrentElement(FileList(), *ProjectInfo)
+    SetTabBarGadgetItemText(#GADGET_FilesPanel, ListIndex(FileList()), Language("Project","TabTitle") + " [" + ProjectName$ + "]")
+    PopListPosition(FileList())
     
     SetGadgetText(#GADGET_ProjectInfo_FrameProject, Language("Project","ProjectInfo"))
     SetGadgetText(#GADGET_ProjectInfo_FrameFiles, Language("Project","FileTab"))
@@ -614,6 +619,30 @@ Procedure UpdateProjectInfoPreferences()
   EndIf
 EndProcedure
 
+; Enter key handling for project file & target list
+; For Windows this is done when handling the #MENU_Scintilla_Enter shortcut in UserInterface.pb
+CompilerIf #CompileLinuxGtk
+  ProcedureC ProjectInfo_EnterKeyHandler(*Widget, *Event.GdkEventKey, Gadget)
+    Debug "Key event: " + *Event\keyval
+    If *Event\keyval = #GDK_Return
+      PostEvent(#PB_Event_Gadget, #WINDOW_Main, Gadget, #PB_EventType_LeftDoubleClick)
+      
+    ElseIf *Event\keyval = $FE20 ; #GDK_LeftTab
+      If (*Event\state & (1 << 2)) ; Ctrl
+        If (*Event\state & 1) ; Shift
+          If KeyboardShortcuts(#MENU_NextOpenedFile) = #PB_Shortcut_Control|#PB_Shortcut_Shift|#PB_Shortcut_Tab
+            ;ChangeCurrentFile(0)
+            PostEvent(#PB_Event_Menu, #WINDOW_Main, #MENU_NextOpenedFile)
+          ElseIf KeyboardShortcuts(#MENU_PreviousOpenedFile) = #PB_Shortcut_Control|#PB_Shortcut_Shift|#PB_Shortcut_Tab
+            ;ChangeCurrentFile(1)
+            PostEvent(#PB_Event_Menu, #WINDOW_Main, #MENU_PreviousOpenedFile)
+          EndIf
+        EndIf
+      EndIf
+      
+    EndIf
+  EndProcedure
+CompilerEndIf
 
 
 Procedure AddProjectInfo()
@@ -639,7 +668,7 @@ Procedure AddProjectInfo()
       ButtonGadget(#GADGET_ProjectInfo_OpenCompilerOptions, 0, 0, 0, 0, Language("Project","CompilerOptions"))
       
       FrameGadget(#GADGET_ProjectInfo_FrameFiles, 0, 0, 0, 0, Language("Project","FileTab"))
-      ListIconGadget(#GADGET_ProjectInfo_Files, 0, 0, 0, 0, Language("Project","Filename"), 300, #PB_ListIcon_GridLines|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
+      ListIconGadget(#GADGET_ProjectInfo_Files, 0, 0, 300, 0, Language("Project","Filename"), 300, #PB_ListIcon_GridLines|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
       AddGadgetColumn(#GADGET_ProjectInfo_Files, 1, Language("Project","FileLoadShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Files, 2, Language("Project","FileWarnShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Files, 3, Language("Project","FileScanShort"), 60)
@@ -657,7 +686,7 @@ Procedure AddProjectInfo()
       CompilerEndIf
       
       FrameGadget(#GADGET_ProjectInfo_FrameTargets, 0, 0, 0, 0, Language("Project","ProjectTargets"))
-      ListIconGadget(#GADGET_ProjectInfo_Targets, 0, 0, 0, 0, Language("Project","TargetShort"), 200, #PB_ListIcon_GridLines|#PB_ListIcon_FullRowSelect)
+      ListIconGadget(#GADGET_ProjectInfo_Targets, 0, 0, 200, 0, Language("Project","TargetShort"), 200, #PB_ListIcon_GridLines|#PB_ListIcon_FullRowSelect)
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 1, Language("Project","DebugShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 2, Language("Project","ThreadShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 3, Language("Project","AsmShort"), 60)
@@ -666,6 +695,11 @@ Procedure AddProjectInfo()
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 6, Language("Project","BuildCountShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 7, Language("Project","FormatShort"), 60)
       AddGadgetColumn(#GADGET_ProjectInfo_Targets, 8, Language("Project","InputFile"), 200)
+      
+      CompilerIf #CompileLinuxGtk
+        GTKSignalConnect(GadgetID(#GADGET_ProjectInfo_Files), "key-press-event", @ProjectInfo_EnterKeyHandler(), #GADGET_ProjectInfo_Files)
+        GTKSignalConnect(GadgetID(#GADGET_ProjectInfo_Targets), "key-press-event", @ProjectInfo_EnterKeyHandler(), #GADGET_ProjectInfo_Targets)
+      CompilerEndIf
       
       CompilerIf #CompileWindows
         ; Make the settings columns centered for a better look
@@ -701,19 +735,14 @@ Procedure AddProjectInfo()
       ;   Probably a bug that should be fixed there. But this workaround will do the trick
       If CountTabBarGadgetItems(#GADGET_FilesPanel) = 0
         ; first item, use #PB_Default
-        AddTabBarGadgetItem(#GADGET_FilesPanel, #PB_Default, Language("Project", "TabTitle"))
+        AddTabBarGadgetItem(#GADGET_FilesPanel, #PB_Default, Language("Project", "TabTitle") + " [" + ProjectName$ + "]")
       Else
         ; items exist: using 0 works
-        AddTabBarGadgetItem(#GADGET_FilesPanel, 0, Language("Project", "TabTitle"))
+        AddTabBarGadgetItem(#GADGET_FilesPanel, 0, Language("Project", "TabTitle") + " [" + ProjectName$ + "]")
       EndIf
       
-      CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
-        SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_FrontColor, GetCocoaColor("textColor"))
-        SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_BackColor, GetCocoaColor("controlAccentColor"))
-      CompilerElse
-        SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
-        SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_BackColor, #COLOR_ProjectInfo)
-      CompilerEndIf
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_FrontColor, #COLOR_FilePanelFront)
+      SetTabBarGadgetItemColor(#GADGET_FilesPanel, 0, #PB_Gadget_BackColor, #COLOR_ProjectInfo)
       
       SetTabBarGadgetItemImage(#GADGET_FilesPanel, 0, OptionalImageID(#IMAGE_FilePanel_Project))
       
@@ -825,6 +854,11 @@ EndProcedure
 ; displays an error if it fails, returns true/false
 ;
 Procedure LoadProject(Filename$)
+  
+  If IsProjectBusy = #True
+    ProcedureReturn #False
+  EndIf
+  
   Error$  = ""
   Success = #False
   
@@ -850,6 +884,8 @@ Procedure LoadProject(Filename$)
     If CheckProjectVersion(FileName$) And CloseProject() ; Close the previous project (If any). If the user cancel the previous project closing, we have to stop.
       Success = #True
       *Main   = MainXMLNode(#XML_LoadProject)
+      
+      IsProjectBusy = #True
       
       ; add new project to "Recent projects"
       ;
@@ -948,6 +984,7 @@ Procedure LoadProject(Filename$)
               ProjectFiles()\ShowWarning = Xml_Boolean(GetXMLAttribute(*Config, "warn"))
               ProjectFiles()\LastOpen    = Xml_Boolean(GetXMLAttribute(*Config, "lastopen"))
               ProjectFiles()\PanelState$ = Xml_SingleLine(GetXMLAttribute(*Config, "panelstate")) ; the default for this is "all open", so need no backward compatibility here
+              ProjectFiles()\SortIndex   = Xml_Integer(GetXMLAttribute(*Config, "sortindex"))
             Else
               ProjectFiles()\AutoLoad    = 0
               ProjectFiles()\AutoScan    = IsCodeFile(ProjectFiles()\Filename$)
@@ -955,6 +992,7 @@ Procedure LoadProject(Filename$)
               ProjectFiles()\ShowWarning = 1
               ProjectFiles()\LastOpen    = 0
               ProjectFiles()\PanelState$ = ""
+              ProjectFiles()\SortIndex   = 999
             EndIf
             
             *Fingerprint = XMLNodeFromPath(*File, "fingerprint")
@@ -1009,15 +1047,19 @@ Procedure LoadProject(Filename$)
                     ProjectTargets()\EnableASM     = Xml_Boolean(GetXMLAttribute(*Entry, "asm"))
                     ProjectTargets()\EnableThread  = Xml_Boolean(GetXMLAttribute(*Entry, "thread"))
                     ProjectTargets()\EnableXP      = Xml_Boolean(GetXMLAttribute(*Entry, "xpskin"))
+                    ProjectTargets()\EnableWayland = Xml_Boolean(GetXMLAttribute(*Entry, "wayland"))
                     ProjectTargets()\EnableAdmin   = Xml_Boolean(GetXMLAttribute(*Entry, "admin"))
                     ProjectTargets()\EnableUser    = Xml_Boolean(GetXMLAttribute(*Entry, "user"))
                     ProjectTargets()\DPIAware      = Xml_Boolean(GetXMLAttribute(*Entry, "dpiaware"))
+                    ProjectTargets()\DllProtection = Xml_Boolean(GetXMLAttribute(*Entry, "dllprotection"))
+                    ProjectTargets()\SharedUCRT    = Xml_Boolean(GetXMLAttribute(*Entry, "shareducrt"))
                     ProjectTargets()\EnableOnError = Xml_Boolean(GetXMLAttribute(*Entry, "onerror"))
                     ProjectTargets()\Debugger      = Xml_Boolean(GetXMLAttribute(*Entry, "debug"))
                     ProjectTargets()\EnableUnicode = Xml_Boolean(GetXMLAttribute(*Entry, "unicode"))
+                    ProjectTargets()\Optimizer     = Xml_Boolean(GetXMLAttribute(*Entry, "optimizer"))
                     
                     CompilerIf #SpiderBasic
-                      ProjectTargets()\OptimizeJS    = Xml_Boolean(GetXMLAttribute(*Entry, "optimizejs"))
+                      ProjectTargets()\Optimizer    | Xml_Boolean(GetXMLAttribute(*Entry, "optimizejs")) ; backward compatibility (now named "optimizer")
                       ProjectTargets()\WebServerAddress$ = Xml_SingleLine(GetXMLAttribute(*Entry, "webserveraddress"))
                       ProjectTargets()\WindowTheme$  = Xml_SingleLine(GetXMLAttribute(*Entry, "windowtheme"))
                       ProjectTargets()\GadgetTheme$  = Xml_SingleLine(GetXMLAttribute(*Entry, "gadgettheme"))
@@ -1044,27 +1086,30 @@ Procedure LoadProject(Filename$)
                       ProjectTargets()\iOSAppStartupImage$ = Xml_SingleLine(GetXMLAttribute(*Entry, "iosappstartupimage"))
                       ProjectTargets()\iOSAppOrientation   = Val(Xml_SingleLine(GetXMLAttribute(*Entry, "iosapporientation")))
                       ProjectTargets()\iOSAppFullScreen    = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappfullscreen"))
-                      ProjectTargets()\iOSAppGeolocation   = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappgeolocation"))
                       ProjectTargets()\iOSAppOutput$       = Xml_SingleLine(GetXMLAttribute(*Entry, "iosappoutput"))
                       ProjectTargets()\iOSAppAutoUpload    = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappautoupload"))
                       ProjectTargets()\iOSAppEnableResourceDirectory = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappenableresourcedirectory"))
                       ProjectTargets()\iOSAppResourceDirectory$      = Xml_SingleLine(GetXMLAttribute(*Entry, "iosappresourcedirectory"))
                       ProjectTargets()\iOSAppEnableDebugger   = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappenabledebugger"))
+                      ProjectTargets()\iOSAppKeepAppDirectory = Xml_Boolean   (GetXMLAttribute(*Entry, "iosappkeepappdirectory"))
                       
                       ProjectTargets()\AndroidAppName$         = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappname"))
                       ProjectTargets()\AndroidAppIcon$         = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappicon"))
                       ProjectTargets()\AndroidAppVersion$      = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappversion"))
+                      ProjectTargets()\AndroidAppCode          = Xml_Integer(GetXMLAttribute(*Entry, "androidappcode"))
                       ProjectTargets()\AndroidAppPackageID$    = Xml_SingleLine(GetXMLAttribute(*Entry, "androidapppackageid"))
                       ProjectTargets()\AndroidAppIAPKey$       = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappiapkey"))
                       ProjectTargets()\AndroidAppStartupImage$ = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappstartupimage"))
+                      ProjectTargets()\AndroidAppStartupColor$ = Xml_SingleLine(GetXMLAttribute(*Entry, "androidstartupcolor"))
                       ProjectTargets()\AndroidAppOrientation   = Val(Xml_SingleLine(GetXMLAttribute(*Entry, "androidapporientation")))
                       ProjectTargets()\AndroidAppFullScreen    = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappfullscreen"))
-                      ProjectTargets()\AndroidAppGeolocation   = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappgeolocation"))
                       ProjectTargets()\AndroidAppOutput$       = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappoutput"))
                       ProjectTargets()\AndroidAppAutoUpload    = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappautoupload"))
                       ProjectTargets()\AndroidAppEnableResourceDirectory = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappenableresourcedirectory"))
                       ProjectTargets()\AndroidAppResourceDirectory$      = Xml_SingleLine(GetXMLAttribute(*Entry, "androidappresourcedirectory"))
                       ProjectTargets()\AndroidAppEnableDebugger   = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappenabledebugger"))
+                      ProjectTargets()\AndroidAppKeepAppDirectory = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappkeepappdirectory"))
+                      ProjectTargets()\AndroidAppInsecureFileMode = Xml_Boolean   (GetXMLAttribute(*Entry, "androidappinsecurefilemode"))
                     CompilerEndIf
                     
                   Case "purifier"
@@ -1170,8 +1215,8 @@ Procedure LoadProject(Filename$)
         EndIf
       EndIf
       
-      ; Auto-sort the project files for better handling
-      SortStructuredList(ProjectFiles(), #PB_Sort_Ascending | #PB_Sort_NoCase, OffsetOf(ProjectFile\FileName$), #PB_String)
+      ; Sort project files according to their last position in the IDE
+      SortStructuredList(ProjectFiles(), #PB_Sort_Ascending, OffsetOf(ProjectFile\SortIndex), #PB_Long)
       
       If CommandlineBuild = 0
         
@@ -1218,7 +1263,7 @@ Procedure LoadProject(Filename$)
             
             If ProjectOpenMode = #Project_Open_LoadAll Or (ProjectOpenMode = #Project_Open_LoadLast And ProjectFiles()\LastOpen) Or (ProjectOpenMode = #Project_Open_LoadDefault And ProjectFiles()\AutoLoad)
               PushListPosition(ProjectFiles())
-              LoadSourceFile(ProjectFiles()\FileName$) ; can change the ProjectFiles() index
+              LoadSourceFile(ProjectFiles()\FileName$, 1, 0) ; can change the ProjectFiles() index
               
               ; Flush events. So when many sources are opened at once, the User can see a bit the
               ; progress, instead of just an unresponsive window for quite a while.
@@ -1272,6 +1317,8 @@ Procedure LoadProject(Filename$)
         ChangeActiveSourceCode()
         
       EndIf
+      
+      IsProjectBusy = #False
       
     Else
       ;
@@ -1386,11 +1433,12 @@ Procedure SaveProject(ShowErrors)
       SetXMLAttribute(*File, "name", CreateRelativePath(BasePath$, ProjectFiles()\FileName$))
       
       *FileConfig = AppendNode(*File, "config")
-      SetXMLAttribute(*FileConfig, "load",     Str(ProjectFiles()\AutoLoad))
-      SetXMLAttribute(*FileConfig, "scan",     Str(ProjectFiles()\AutoScan))
-      SetXMLAttribute(*FileConfig, "panel",    Str(ProjectFiles()\ShowPanel))
-      SetXMLAttribute(*FileConfig, "warn",     Str(ProjectFiles()\ShowWarning))
-      SetXMLAttribute(*FileConfig, "lastopen", Str(ProjectFiles()\LastOpen))
+      SetXMLAttribute(*FileConfig, "load",      Str(ProjectFiles()\AutoLoad))
+      SetXMLAttribute(*FileConfig, "scan",      Str(ProjectFiles()\AutoScan))
+      SetXMLAttribute(*FileConfig, "panel",     Str(ProjectFiles()\ShowPanel))
+      SetXMLAttribute(*FileConfig, "warn",      Str(ProjectFiles()\ShowWarning))
+      SetXMLAttribute(*FileConfig, "lastopen",  Str(ProjectFiles()\LastOpen))
+      SetXMLAttribute(*FileConfig, "sortindex", Str(ProjectFiles()\SortIndex))
       
       If ProjectFiles()\ShowPanel
         SetXMLAttribute(*FileConfig, "panelstate", ProjectFiles()\PanelState$)
@@ -1454,6 +1502,9 @@ Procedure SaveProject(ShowErrors)
       If ProjectTargets()\EnableXP
         SetXMLAttribute(*Options, "xpskin",  "1")
       EndIf
+      If ProjectTargets()\EnableWayland
+        SetXMLAttribute(*Options, "wayland",  "1")
+      EndIf
       If ProjectTargets()\EnableAdmin
         SetXMLAttribute(*Options, "admin",   "1")
       EndIf
@@ -1463,6 +1514,12 @@ Procedure SaveProject(ShowErrors)
       If ProjectTargets()\DPIAware
         SetXMLAttribute(*Options, "dpiaware",  "1")
       EndIf
+      If ProjectTargets()\DllProtection
+        SetXMLAttribute(*Options, "dllprotection",  "1")
+      EndIf
+      If ProjectTargets()\SharedUCRT
+        SetXMLAttribute(*Options, "shareducrt",  "1")
+      EndIf
       If ProjectTargets()\EnableOnError
         SetXMLAttribute(*Options, "onerror", "1")
       EndIf
@@ -1470,8 +1527,9 @@ Procedure SaveProject(ShowErrors)
         SetXMLAttribute(*Options, "debug",   "1")
       EndIf
       
+      SetXMLAttribute(*Options, "optimizer", Str(ProjectTargets()\Optimizer))
+      
       CompilerIf #SpiderBasic
-        SetXMLAttribute(*Options, "optimizejs", Str(ProjectTargets()\OptimizeJS))
         SetXMLAttribute(*Options, "webserveraddress", ProjectTargets()\WebServerAddress$)
         SetXMLAttribute(*Options, "windowtheme"  , ProjectTargets()\WindowTheme$)
         SetXMLAttribute(*Options, "gadgettheme"  , ProjectTargets()\GadgetTheme$)
@@ -1498,27 +1556,30 @@ Procedure SaveProject(ShowErrors)
         SetXMLAttribute(*Export, "iosappstartupimage" , ProjectTargets()\iOSAppStartupImage$)
         SetXMLAttribute(*Export, "iosapporientation"  , Str(ProjectTargets()\iOSAppOrientation))
         SetXMLAttribute(*Export, "iosappfullscreen"   , Str(ProjectTargets()\iOSAppFullScreen))
-        SetXMLAttribute(*Export, "iosappgeolocation"  , Str(ProjectTargets()\iOSAppGeolocation))
         SetXMLAttribute(*Export, "iosappoutput"       , ProjectTargets()\iOSAppOutput$)
         SetXMLAttribute(*Export, "iosappautoupload"   , Str(ProjectTargets()\iOSAppAutoUpload))
         SetXMLAttribute(*Export, "iosappenableresourcedirectory", Str(ProjectTargets()\iOSAppEnableResourceDirectory))
         SetXMLAttribute(*Export, "iosappresourcedirectory", ProjectTargets()\iOSAppResourceDirectory$)
         SetXMLAttribute(*Export, "iosappenabledebugger", Str(ProjectTargets()\iOSAppEnableDebugger))
+        SetXMLAttribute(*Export, "iosappkeepappdirectory", Str(ProjectTargets()\iOSAppKeepAppDirectory))
         
         SetXMLAttribute(*Export, "androidappname"         , ProjectTargets()\AndroidAppName$)
         SetXMLAttribute(*Export, "androidappicon"         , ProjectTargets()\AndroidAppIcon$)
         SetXMLAttribute(*Export, "androidappversion"      , ProjectTargets()\AndroidAppVersion$)
+        SetXMLAttribute(*Export, "androidappcode"         , Str(ProjectTargets()\AndroidAppCode))
         SetXMLAttribute(*Export, "androidapppackageid"    , ProjectTargets()\AndroidAppPackageID$)
         SetXMLAttribute(*Export, "androidappiapkey"       , ProjectTargets()\AndroidAppIAPKey$)
         SetXMLAttribute(*Export, "androidappstartupimage" , ProjectTargets()\AndroidAppStartupImage$)
+        SetXMLAttribute(*Export, "androidappstartupcolor" , ProjectTargets()\AndroidAppStartupColor$)
         SetXMLAttribute(*Export, "androidapporientation"  , Str(ProjectTargets()\AndroidAppOrientation))
         SetXMLAttribute(*Export, "androidappfullscreen"   , Str(ProjectTargets()\AndroidAppFullScreen))
-        SetXMLAttribute(*Export, "androidappgeolocation"  , Str(ProjectTargets()\AndroidAppGeolocation))
         SetXMLAttribute(*Export, "androidappoutput"       , ProjectTargets()\AndroidAppOutput$)
         SetXMLAttribute(*Export, "androidappautoupload"   , Str(ProjectTargets()\AndroidAppAutoUpload))
         SetXMLAttribute(*Export, "androidappenableresourcedirectory", Str(ProjectTargets()\AndroidAppEnableResourceDirectory))
         SetXMLAttribute(*Export, "androidappresourcedirectory", ProjectTargets()\AndroidAppResourceDirectory$)
         SetXMLAttribute(*Export, "androidappenabledebugger", Str(ProjectTargets()\AndroidAppEnableDebugger))
+        SetXMLAttribute(*Export, "androidappkeepappdirectory", Str(ProjectTargets()\AndroidAppKeepAppDirectory))
+        SetXMLAttribute(*Export, "androidappinsecurefilemode", Str(ProjectTargets()\AndroidAppInsecureFileMode))
         
       CompilerEndIf
       
@@ -1668,6 +1729,10 @@ EndProcedure
 
 Procedure OpenProject()
   
+  If IsProjectBusy = #True
+    ProcedureReturn
+  EndIf
+  
   If IsProjectCreation = 0
     
     If IsProject
@@ -1688,7 +1753,15 @@ Procedure OpenProject()
 EndProcedure
 
 Procedure CloseProject(IsIDEShutdown = #False)
+  
+  ; If project is busy loading, don't allow close (prevents crash)
+  If (IsProjectBusy = #True) And (IsIDEShutdown = #False)
+    ProcedureReturn #False
+  EndIf
+  
   If IsProject
+    
+    IsProjectBusy = #True
     
     ; close options
     If IsWindow(#WINDOW_ProjectOptions)
@@ -1719,8 +1792,17 @@ Procedure CloseProject(IsIDEShutdown = #False)
     ForEach ProjectFiles()
       If ProjectFiles()\Source
         ProjectFiles()\LastOpen = #True
+        PushListPosition(FileList())
+        ForEach FileList()
+          If ProjectFiles()\FileName$ = FileList()\FileName$
+            ProjectFiles()\SortIndex = ListIndex(FileList())
+            Break
+          EndIf
+        Next
+        PopListPosition(FileList())
       Else
         ProjectFiles()\LastOpen = #False
+        ProjectFiles()\SortIndex = 999
       EndIf
     Next ProjectFiles()
     
@@ -1779,6 +1861,7 @@ Procedure CloseProject(IsIDEShutdown = #False)
       EndIf
       
       If Result = #False
+        IsProjectBusy = #False
         ProcedureReturn #False
       EndIf
       
@@ -1806,8 +1889,11 @@ Procedure CloseProject(IsIDEShutdown = #False)
       CreateIDEMenu()
       StopFlickerFix(#WINDOW_Main, 1)
     Else
+      IsProjectBusy = #False
       ProcedureReturn #False ; The project has not been closed.
     EndIf
+    
+    IsProjectBusy = #False
   EndIf
   
   ProcedureReturn #True
@@ -2118,6 +2204,8 @@ Procedure ProjectOptionsEvents(EventID)
         If ProjectOK
           
           ; In case we create a new project. Now we have a project data
+          OldProjectName$ = ProjectName$
+          ProjectName$    = Trim(GetGadgetText(#GADGET_Project_Name))
           If IsProjectCreation
             IsProject    = #True
             ProjectFile$ = NewProjectFile$
@@ -2139,10 +2227,17 @@ Procedure ProjectOptionsEvents(EventID)
             ; switch to the info source, so the user can directly get to the projects compiler options etc
             FirstElement(FileList())
             ChangeActiveSourceCode()
+          ElseIf OldProjectName$ <> ProjectName$
+            ;change name of Tab, if user changed the project name
+            If *ProjectInfo
+              PushListPosition(FileList())
+              ChangeCurrentElement(FileList(), *ProjectInfo)
+              SetTabBarGadgetItemText(#GADGET_FilesPanel, ListIndex(FileList()), Language("Project","TabTitle") + " [" + ProjectName$ + "]")
+              PopListPosition(FileList())
+            EndIf
           EndIf
           
           ; Update the options
-          ProjectName$     = Trim(GetGadgetText(#GADGET_Project_Name))
           ProjectComments$ = GetGadgetText(#GADGET_Project_Comments)
           
           If GetGadgetState(#GADGET_Project_SetDefault)
@@ -2570,14 +2665,15 @@ Procedure OpenProjectOptions(NewProject)
       
       ProjectExplorerPattern = 0 ; default pattern is "PB files"
       ProjectExplorerPath$   = SourcePath$
-      
       ClearList(ProjectConfig()) ; no files in the list yet
-      
       ProjectOptionsDialog\GuiUpdate() ; to resize from the new strings
       
-      DisableWindow(#WINDOW_Main, 1)
+      CompilerIf #CompileLinuxQt = 0
+        ; On QT disabling the main window disables its child too so this will lock the IDE
+        DisableWindow(#WINDOW_Main, 1)
+      CompilerEndIf
       SetActiveGadget(#GADGET_Project_File)
-      
+
     Else
       IsProjectCreation = 0
       
@@ -2613,9 +2709,19 @@ Procedure OpenProjectOptions(NewProject)
     
     ; This also fills the explorer pattern in the project options and sets the correct state
     UpdateExplorerPatterns()
+
+    CompilerIf #CompileLinux
+      ; On Linux we have to check if ProjectExplorerPath$ is an accessible folder - otherwise a crash
+      ; will occur because of a bug in the following SetGadgetText()!
+      ; If ProjectExplorerPath$ is no folder then change it to home folder
+      If FileSize(ProjectExplorerPath$) <> -2
+        ProjectExplorerPath$ = GetHomeDirectory()
+      EndIf
+    CompilerEndIf
+
     SetGadgetText(#GADGET_Project_Explorer, ProjectExplorerPath$+StringField(ExplorerPatternStrings$, ProjectExplorerPattern+1, "|"))
     SetGadgetText(#GADGET_Project_ExplorerCombo, ProjectExplorerPath$)
-    
+
     UpdateProjectOptionStates() ; disable some buttons as needed
   EndIf
   

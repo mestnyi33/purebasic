@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software and Gaetan DUPONT-PANON. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 Global imglist_grid
 Procedure UpdateImgList()
   grid_DeleteAllRows(imglist_grid)
@@ -27,7 +27,7 @@ Procedure UpdateImgList()
   EndIf
 EndProcedure
 Procedure InitImgList()
-  OpenWindow(#Form_ImgList, 0, 0, 600, 300, "",#PB_Window_SystemMenu | #PB_Window_TitleBar | #PB_Window_WindowCentered | #PB_Window_SizeGadget,WindowID(#WINDOW_Main))
+  OpenWindow(#Form_ImgList, 0, 0, 770, 550, Language("Misc","ImageManagerTitle"),#PB_Window_SystemMenu | #PB_Window_TitleBar | #PB_Window_WindowCentered | #PB_Window_SizeGadget | #PB_Window_MaximizeGadget ,WindowID(#WINDOW_Main))
   AddKeyboardShortcut(#Form_ImgList, #PB_Shortcut_Command | #PB_Shortcut_C, #Menu_Copy)
   AddKeyboardShortcut(#Form_ImgList, #PB_Shortcut_Command | #PB_Shortcut_X, #Menu_Cut)
   AddKeyboardShortcut(#Form_ImgList, #PB_Shortcut_Command | #PB_Shortcut_V, #Menu_Paste)
@@ -36,14 +36,15 @@ Procedure InitImgList()
   grid_SetGadgetAttribute(imglist_grid,#Grid_Disable_Delete,1)
   
   grid_SetColumnCaption(imglist_grid,0,Language("Form", "ImageURL"))
+  grid_SetColumnWidth(imglist_grid,0,250)
   grid_SetColumnCaption(imglist_grid,1,"CatchImage?")
   grid_SetColumnWidth(imglist_grid,1,100)
   grid_SetColumnCaption(imglist_grid,2,"PBAny?")
   grid_SetColumnWidth(imglist_grid,2,100)
   grid_SetColumnCaption(imglist_grid,3,Language("Form", "SelectImage"))
-  grid_SetColumnWidth(imglist_grid,3,100)
+  grid_SetColumnWidth(imglist_grid,3,110)
   grid_SetColumnCaption(imglist_grid,4,Language("Form", "RelativePath"))
-  grid_SetColumnWidth(imglist_grid,4,100)
+  grid_SetColumnWidth(imglist_grid,4,150)
   
   UpdateImgList()
 EndProcedure

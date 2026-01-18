@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 ;
 ;
@@ -65,6 +65,19 @@ Procedure GetRequiredSize(Gadget, *Width.LONG, *Height.LONG, Flags = 0)
   *Width\l  = GadgetWidth(Gadget, #PB_Gadget_RequiredSize)
   *Height\l = GadgetHeight(Gadget, #PB_Gadget_RequiredSize)
   
+  CompilerIf #CompileMac
+    Select GadgetType(Gadget)
+      Case #PB_GadgetType_Button
+        If *Height\l < 28
+          *Height\l = 28
+        EndIf
+      Case #PB_GadgetType_String
+        If *Height\l < 24
+          *Height\l = 24
+        EndIf
+    EndSelect
+  CompilerEndIf
+  
 EndProcedure
 
 ; convenience wrappers if only one size is needed
@@ -81,6 +94,11 @@ Procedure GetRequiredHeight(Gadget, Flags = 0)
   ProcedureReturn Height
 EndProcedure
 
+CompilerIf #CompileLinuxQt
+  ImportC "../PureBasicIDE/Build/QtHelpers.a"
+    QT_Frame3DTopOffset(*Widget)
+  EndImport
+CompilerEndIf
 
 ; Calculate the top offset for a Frame3DGadget
 Procedure Frame3DTopOffset(Gadget)
@@ -94,9 +112,14 @@ Procedure Frame3DTopOffset(Gadget)
     ProcedureReturn Max(Size\cy, 10)
   CompilerEndIf
   
-  CompilerIf #CompileLinux
+  CompilerIf #CompileLinuxGtk
     gtk_widget_size_request_(gtk_frame_get_label_widget_(GadgetID(Gadget)), @Size.GtkRequisition)
     ProcedureReturn Size\Height
+  CompilerEndIf
+  
+  CompilerIf #CompileLinuxQt
+    ; Imported via PureBasicIDE/LinuxExtensions.pb
+    ProcedureReturn QT_Frame3DTopOffset(GadgetID(Gadget))
   CompilerEndIf
   
   CompilerIf #CompileMac

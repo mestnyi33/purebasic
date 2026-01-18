@@ -1,0 +1,275 @@
+= PureBasic Documentation Guidelines
+Fantaisie Software <support@purebasic.com>
+:revdate: 2020-11-26
+:DocMakerVer: 5.00
+:revremark: DocMaker v{DocMakerVer}
+:revnumber!:
+:lang: en
+:favicon: https://www.purebasic.com/img/favicon.png
+// TOC Settings:
+:toclevels: 5
+:toc: left
+// Sections Numbering:
+:sectnums:
+:sectnumlevels: 2
+// Cross References:
+:xrefstyle: short
+:section-refsig: Sect.
+// Misc Settings:
+:experimental:
+:icons: font
+:linkattrs:
+:reproducible:
+:sectanchors:
+
+include::inc_warn-editing.adoc[]
+
+// IMPORTANT!!!
+// *****************************************************************************
+// If you edit the contents of this document, don't forget to update also the
+// :revdate: line accordingly (3rd line), so end users will always know which
+// version of the document they're dealing with, and which one is the latest.
+// *****************************************************************************
+
+// *****************************************************************************
+// *                            Document Preamble                              *
+// *****************************************************************************
+
+Some guidelines on how to write proper documentation for PureBasic.
+
+
+== Commands Descriptions
+
+About writing proper descriptions in the commands.
+
+
+. Include references to other commands (same library and other libraries, and to the reference chapters as well) whenever this makes sense.
++
+--
+Links to other sections of the manual can be easily created via the following tags:
+
+[horizontal]
+`@@_FunctionName_`                      :: -- direct link to the function (any library).
+`@Link "DrawImage" "DrawImage()"`       :: -- direct link to a command (same library).
+`@Link "Image/DrawImage" "DrawImage()"` :: -- direct link to a command (other library).
+`@LibraryLink "Image" "text"`           :: -- link to the main page of a library.
+`@ReferenceLink "colortable" "text"`    :: -- link to a chapter in reference guide.
+
+Use the `@@_FunctionName_` notation wherever a link in the form `@Link "Library/Function" "Function()"` is not necessary, because the former is shorter.
+Use the general `@Link` form only to create links with a different text than the function name.
+
+The following link form is still supported for compatibility, but should no longer be used:
+
+[horizontal]
+`@FastLink "DrawImage()"` :: -- direct link to a command (same library) short version.
+--
+
+. For the function syntax line, only include a `Result ={nbsp}` if the function actually returns something.
++
+--
+The `Result` part should indicate the type of the return value:
+
+-------------------------------------
+@Function Result$ = ReplaceString(...
+@Function Result.f = ValF(...
+@Function CloseWindow(...
+-------------------------------------
+--
+
+. Always include a *parameters* and *return value* section.
+If they are empty, use the shortcuts `@NoParameters` or `@NoReturnValue` but do not leave them out!
+
+. Describe ALL parameters to a function with a `@Parameter` statement, even if their meaning seems obvious.
+Multiple parameters can be described in one go if they belong together, but every parameter must be listed somewhere:
++
+-----------------------------------------------------------
+@Parameter "x, y, Width, Height"
+  Specifies the location and dimensions of the box to draw.
+-----------------------------------------------------------
+
+. Mark optional parameters with an `@OptionalParameter` line, and in the text describe what happens if they are omitted:
++
+---------------------------------------------------------------------------
+@OptionalParameter "Depth"
+  Specifies the depth for the new image. [...] The default depth is 24-bit.
+---------------------------------------------------------------------------
+
+. Keep the `@Description` section short.
+If there is extra stuff to say, put it in a `@Remarks` section after *parameters* and *return value*.
+
+. Stuff to put in the `@SeeAlso` section:
+
+** Commands that are mentioned/linked elsewhere in the current command page (e.g. in the `@Remarks` section).
+This grants quick access to user who have read the whole page.
+
+** Commands that must be used to create a parameter for the current command:
++
+`ImageGadget()` -> `ImageID()`
+
+** All open/close commands that correspond to the current command:
++
+`OpenConsole()` -> `CloseConsole()` +
+`FreeImage()`   -> `CreateImage(), LoadImage(), CatchImage()`
+
+** Commands that have to be used together with the current command:
++
+`NextDirectoryEntry()` -> `ExamineDirectory(), FinishDirectory(), DirectoryEntry[Name, Type, etc]()`
+
+** Commands that perform a similar/related function as the current command:
++
+`Line()`  -> `LineXY()` +
+`Print()` -> `PrintN()`
+
+** Other commands that users might want to know about in relation to the current command.
+Don't overdo it though: don't list all commands of the current library, etc.
+
+. Order of sections for a function:
+** `@Function`
+** `@Description`
+** `@Parameter` (for each parameter)
+** `@ReturnValue`
+** `@Remarks` (optional)
+** `@Example` (optional, can be more than one)
+** *image(s)* (optional)
+** `@SeeAlso`
+** `@SupportedOS`
+
++
+Images should be accompanied by the code that produced the image/screenshot, as an example so that users can recreate the same image and experiment with the code.
+
+// @TODO: Provide an example of the code that produced the image/screenshot.
+//        Find one in the PB Help sources (I couldn't find any so far).
+//
+//     -- It's not clear what "code" the above is referring to, i.e. whether
+//        it's PB code that procedurally generates an image (e.g. a chart) or
+//        if it's referring to some automated script to generate screenshots
+//        (images and screenshots are quite different beasts altogether).
+//
+//     -- Separating images from screenshots in the above sentence, and
+//        specifying what's expected for each type, independently, would improve
+//        readability and understanding.
+//
+//     -- Should also provide an example for each type (image/screenshot).
+
+
+
+== Taking Screenshots
+
+Screenshots should be taken with the same tool and using consistent settings.
+Unless dealing with OS specific things, they should be taken under Windows{nbsp}7.
+
+
+. Use https://getgreenshot.org[_Greenshot_^,title="Go to Greenshot website"]
++
+--
+To take screenshots of whole windows:
+
+* In the preferences of _Greenshot_, under menu:Capture[Window capture], select "`Window capture mode`" and "`Use custom color`".
+Enter `#66B2FF` as the color to use.
+
+To take screenshots of specific parts of a window, the "`Use interactive window capture mode`" is fine.
+--
+
+. Use Windows 7 with the default theme.
+
+. Ensure your PureBasic IDE is setup with the default preferences settings and color theme.
+
+
+
+== Code Conventions
+
+Some code styles conventions for the code examples for the various commands.
+The goal is to provide end users with consistent looking code sources.
+
+
+. Always uses a 2 spaces indent, even before the first statement:
++
+-------------
+@Code
+  If a = 10
+    If b = 10
+    EndIf
+  EndIf
+@EndCode
+-------------
+
+. Don't use types (e.g. `.w`, `.b`) unless absolutely necessary, because they make the code slightly harder to read.
++
+--
+.OK:
+-----------------
+  For k = 0 To 10
+
+  Next
+-----------------
+
+.Wrong:
+-------------------
+  For k.w = 0 To 10
+
+  Next
+-------------------
+--
+
+. Insert separating spaces between parameters, operators, constants, etc.
++
+--
+.OK:
+--------------------------------------------------------------------------------
+  If OpenWindow(0, 0, 0, 100, 100, "Test", #PB_Window_SystemMenu | #PB_MaximizeGadget)
+
+  EndIf
+--------------------------------------------------------------------------------
+
+.Wrong:
+------------------------------------------------------------------------------
+  If OpenWindow(0,0,0,100,100,"Test",#PB_Window_SystemMenu|#PB_MaximizeGadget)
+
+  EndIf
+------------------------------------------------------------------------------
+--
+
+. Don't use the `End`, `FreeXXX()`, `CloseXXX()` statement unless necessary.
+The code is clearer without them.
++
+--
+.OK:
+--------------------------------------------------------------------------------
+@Code
+  OpenConsole()
+
+  If ReadFile(0, "C:\Test.txt")
+    PrintN(ReadString())
+  EndIf
+@EndCode
+--------------------------------------------------------------------------------
+
+.Wrong:
+------------------------------------------------------------------------------
+@Code
+  OpenConsole()
+
+  If ReadFile(0, "C:\Test.txt")
+    PrintN(ReadString())
+    CloseFile(0)
+  EndIf
+
+  CloseConsole()
+  End
+@EndCode
+------------------------------------------------------------------------------
+--
+
+. Variables names and other identifiers should be in
+https://en.wikipedia.org/wiki/Camel_case[camel case^,title="Wikipedia page on Camel Case"], not in
+https://en.wikipedia.org/wiki/Snake_case[snake case^,title="Wikipedia page on Camel Case"]
+-- i.e. mixed-case, without `_`:
+
+** _[.green]#OK:#_ `MyVariable`
+** _[.red]#Wrong:#_ `my_variable`, `My_Variable`
+
+. Add more here if needed :p !
+
+include::inc_contributing.adoc[]
+
+// EOF //

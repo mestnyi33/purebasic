@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 Global Dim MemoryViewer_Chars.s(31)
 
 #MEMORY_VIEW_TABLE_DATA_DEC = 0
@@ -740,9 +740,6 @@ Procedure OpenMemoryViewerWindow(*Debugger.DebuggerData)
       If EditorFontID
         SetGadgetFont(*Debugger\Gadgets[#DEBUGGER_GADGET_Memory_Editor], EditorFontID)
       EndIf
-      CompilerIf #CompileWindows
-        SetCodePage(*Debugger\Gadgets[#DEBUGGER_GADGET_Memory_Editor])
-      CompilerEndIf
       SetGadgetAttribute(*Debugger\Gadgets[#DEBUGGER_GADGET_Memory_Editor], #PB_Editor_ReadOnly, 1)
       
       CompilerIf #DEFAULT_CanWindowStayOnTop

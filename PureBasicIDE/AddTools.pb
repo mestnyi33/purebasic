@@ -1,8 +1,8 @@
-﻿;--------------------------------------------------------------------------------------------
+﻿; --------------------------------------------------------------------------------------------
 ;  Copyright (c) Fantaisie Software. All rights reserved.
 ;  Dual licensed under the GPL and Fantaisie Software licenses.
 ;  See LICENSE and LICENSE-FANTAISIE in the project root for license information.
-;--------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------
 
 Global IsNewTool
 
@@ -82,6 +82,8 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
     If ToolArguments$ = ""
       If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_FileViewer_Special
         ToolArguments$ = Chr(34)+AddTools_File$+Chr(34)
+      ElseIf Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text Or Trigger = #TRIGGER_OpenFile_Special
+        ToolArguments$ = Chr(34)+AddTools_File$+Chr(34)
       EndIf
       
     Else
@@ -91,6 +93,8 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
       
       If FindString(Test$, "%FILE", 1)
         If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_FileViewer_Special
+          ToolArguments$ = ReplaceString(ToolArguments$, "%FILE", AddTools_File$, 1)
+        ElseIf Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text Or Trigger = #TRIGGER_OpenFile_Special
           ToolArguments$ = ReplaceString(ToolArguments$, "%FILE", AddTools_File$, 1)
           
         ElseIf *Target = 0 Or *Target = *ProjectInfo Or *Target\FileName$ = ""
@@ -118,6 +122,8 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
       
       If FindString(Test$, "%TEMPFILE", 1)
         If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_FileViewer_Special
+          ToolArguments$ = ReplaceString(ToolArguments$, "%TEMPFILE", "", 1)
+        ElseIf Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text Or Trigger = #TRIGGER_OpenFile_Special
           ToolArguments$ = ReplaceString(ToolArguments$, "%TEMPFILE", "", 1)
           
         ElseIf *Source = 0 Or *Source <> *ActiveSource ; no current source (ide start/end)
@@ -161,6 +167,8 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
       
       If FindString(Test$, "%PATH", 1)
         If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_FileViewer_Special
+          ToolArguments$ = ReplaceString(ToolArguments$, "%PATH", GetPathPart(AddTools_File$), 1)
+        ElseIf Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text Or Trigger = #TRIGGER_OpenFile_Special
           ToolArguments$ = ReplaceString(ToolArguments$, "%PATH", GetPathPart(AddTools_File$), 1)
           
         ElseIf *Target = 0 Or *Target\FileName$ = ""
@@ -225,7 +233,17 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
     Protected NewList EnvVars.s()
     
     AddTools_SetEnvVar(EnvVars(), "IDE", ProgramFilename())
-    AddTools_SetEnvVar(EnvVars(), "Compiler", *CurrentCompiler\Executable$) ; use *CurrentCompiler to have the real compiler path if multiple compiler are available
+    
+    Protected *TargetCompiler.Compiler
+    If *Target And *Target\CustomCompiler
+      *TargetCompiler = FindCompiler(*Target\CompilerVersion$)
+      If *TargetCompiler = 0
+        *TargetCompiler = @DefaultCompiler
+      EndIf
+    Else
+      *TargetCompiler = @DefaultCompiler
+    EndIf
+    AddTools_SetEnvVar(EnvVars(), "Compiler", *TargetCompiler\Executable$)
     
     AddTools_SetEnvVar(EnvVars(), "Preferences", PreferencesFile$)
     AddTools_SetEnvVar(EnvVars(), "MainWindow", Str(WindowID(#WINDOW_Main)))
@@ -241,6 +259,8 @@ Procedure AddTools_ExecuteCurrent(Trigger, *Target.CompileTarget)
       CompilerIf #CompileWindows
         AddTools_SetEnvVar(EnvVars(), "XPSkin", Str(*Target\EnableXP))
         AddTools_SetEnvVar(EnvVars(), "OnError", Str(*Target\EnableOnError))
+      CompilerElseIf #CompileLinux
+        AddTools_SetEnvVar(EnvVars(), "Wayland", Str(*Target\EnableWayland))
       CompilerEndIf
       AddTools_SetEnvVar(EnvVars(), "Debugger", Str(*Target\Debugger))
       AddTools_SetEnvVar(EnvVars(), "SubSystem", *Target\SubSystem$)
@@ -421,14 +441,14 @@ Procedure AddTools_Execute(Trigger, *Target.CompileTarget)
       EndIf
     EndIf
     
-  ElseIf Trigger = #TRIGGER_FileViewer_Special
+  ElseIf Trigger = #TRIGGER_FileViewer_Special Or Trigger = #TRIGGER_OpenFile_Special
     
     ; check if there is a tool that supports the filetype
     ;
     ext$ = LCase(GetExtensionPart(AddTools_File$))
     
     ForEach ToolsList()
-      If ToolsList()\Trigger = #TRIGGER_FileViewer_Special And ToolsList()\DeactivateTool = 0
+      If ToolsList()\Trigger = Trigger And ToolsList()\DeactivateTool = 0
         
         i = 1
         While StringField(ToolsList()\ConfigLine$, i, ",") <> ""
@@ -451,7 +471,7 @@ Procedure AddTools_Execute(Trigger, *Target.CompileTarget)
       If ToolsList()\Trigger = Trigger And ToolsList()\DeactivateTool = 0
         AddTools_ExecuteCurrent(Trigger, *Target)
         
-        If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown
+        If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text
           AddTools_RunFileViewer = 0 ; indicate that a tool has been executed
           Break                      ; do not run more than one tool!
         EndIf
@@ -493,7 +513,7 @@ Procedure AddTools_Init()
     ToolsList()\SourceSpecific= ReadPreferenceLong  ("SourceSpecific",0)
     ToolsList()\DeactivateTool= ReadPreferenceLong  ("Deactivate",    0)
     
-    If ToolsList()\Trigger = #TRIGGER_FileViewer_Special
+    If ToolsList()\Trigger = #TRIGGER_FileViewer_Special Or ToolsList()\Trigger = #TRIGGER_OpenFile_Special
       Pattern$ = RemoveString(ToolsList()\ConfigLine$, " ")
       If Right(Pattern$, 1) = ","
         Pattern$ = Left(Pattern$, Len(Pattern$)-1)
@@ -586,11 +606,11 @@ Procedure AddTools_UpdateDisabledState()
     
   EndIf
   
-  If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown
+  If Trigger = #TRIGGER_FileViewer_All Or Trigger = #TRIGGER_FileViewer_Unknown Or Trigger = #TRIGGER_OpenFile_nonPB_Binary Or Trigger = #TRIGGER_OpenFile_nonPB_Text
     DisableConfigLine = 1
     DisableReload = 1
     
-  ElseIf Trigger = #TRIGGER_FileViewer_Special
+  ElseIf Trigger = #TRIGGER_FileViewer_Special Or Trigger = #TRIGGER_OpenFile_Special
     DisableReload = 1
   Else
     DisableConfigLine = 1
@@ -1164,7 +1184,7 @@ Procedure AddTools_WindowEvents(EventID)
           
           RemoveKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_All)
           
-          CompilerIf #CompileWindows | #CompileMac ; re-add the shortcuts for tab/enter
+          CompilerIf #CompileWindows | #CompileMac | #CompileLinuxQt; re-add the shortcuts for tab/enter
             AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Return, #MENU_Scintilla_Enter)
             AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Tab, #MENU_Scintilla_Tab)
             AddKeyboardShortcut(#WINDOW_Main, #PB_Shortcut_Shift | #PB_Shortcut_Tab, #MENU_Scintilla_ShiftTab)

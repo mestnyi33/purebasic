@@ -1,0 +1,146 @@
+= PureBasic DocMaker Help
+Fantaisie Software <support@purebasic.com>
+:revdate: 2021-03-06
+:DocMakerVer: 5.00
+:revremark: DocMaker v{DocMakerVer}
+:revnumber!:
+:lang: en
+:favicon: https://www.purebasic.com/img/favicon.png
+// TOC Settings:
+:toc: left
+:toclevels: 5
+// Sections Numbering:
+:sectnums:
+:sectnumlevels: 2
+// Misc Settings:
+:experimental:
+:icons: font
+:linkattrs:
+:reproducible:
+:sectanchors:
+
+include::inc_warn-editing.adoc[]
+
+// IMPORTANT!!!
+// *****************************************************************************
+// If you edit the contents of this document, don't forget to update also the
+// :revdate: line accordingly (3rd line), so end users will always know which
+// version of the document they're dealing with, and which one is the latest.
+// *****************************************************************************
+
+// *****************************************************************************
+// *                            Document Preamble                              *
+// *****************************************************************************
+
+How to use DocMaker v{DocMakerVer} to build the official PureBasic and SpiderBasic documentation, or to document your custom libraries and modules.
+
+[Preface]
+== Introduction
+
+If you want to build help files following the PureBasic format, you should use the DocMaker tool as it will lift all the hard work from you.
+`DocMaker.exe` ships with the PureBasic SDK for Windows, and can be found inside the `SDK/DocMaker/` subfolder of the PureBasic installation.
+
+DocMaker currently supports the following output formats:
+
+
+[horizontal]
+[.red]#*RTF*#        :: Word 97+ compatible.
+[.red]#*CHM Help*#   :: for Windows.
+[.red]#*Multiview*#  :: for Amiga.
+[.red]#*plain HTML*# :: for Linux.
+
+
+To create help files for your own libraries, modules or applications, you'll have to write a template file with some special tags, which DocMaker will convert to the target output format.
+
+TIP: For more info on DocMaker's tags, see the <<DocMaker-Tags#,_PureBasic DocMaker Tags Guide_>>.
+
+
+== Installing DocMaker
+
+DocMaker is a multi-language tool, which means it has to be in a directory containing a subdirectory for each target language, correctly named after the language.
+The contents of a DocMaker working directory should be organized in the following manner:
+
+
+[horizontal]
+`German\`      :: subfolder containing all German library files.
+`English\`     :: subfolder containing all English library files.
+`French\`      :: subfolder containing all French library files.
+`DocMaker.exe` :: the DocMaker application.
+
+
+If the working directory is correctly steup, DocMaker should work as expected; just click on the *Start* button and it will process all the files in the subfolder (according to the selected language).
+
+
+
+== User Library Mode
+
+The '`User Library`' mode allows to create an help file for a third part library, which will be in the same format as the regular PureBasic help.
+
+It will also be recognized when pressing kbd:[F1] over a user library command in the IDE, like any built-in command.
+
+IMPORTANT: In order to enable the kbd:[F1] Help feature, the generated *.chm* file must to be placed inside the `Help\` directory of the PureBasic installation folder.
+
+
+
+== Command Line Usage
+
+You can also invoke DocMaker with the following command line parameters, which are useful to set-up an automated workflow using scripts:
+
+[horizontal]
+`/DOCUMENTATIONPATH` :: Specify the path of the documentation sources (as explained above).
+
+`/OUTPUTPATH` :: The output directory.
+
+`/OS` :: The OS for which the documentation will be compiled.
+It can be either `Windows`, `Linux`, or `AmigaOS`.
+
+`/LANGUAGE` :: The target language.
+The source directory corresponding to the selected language must exist in the folder indicated via `/DOCUMENTATIONPATH`.
+
+`/FORMAT` :: The output format in which the documentation will be generated.
+It can be either `Html`, `RTF`, `Linux`, or `MultiView`.
+
+`/CHM` :: Will create a CHM Help file (only supported on Windows).
+The `/HTMLWORKSHOP` parameter has to be specified when this option is used.
+
+`/HTMLWORKSHOP` :: The full path and filename of the `hhc.exe` file.
+
+`/USERLIBRARY` :: Enable the <<User Library Mode>>.
+
+
+
+== Windows CHM Help
+
+Compiled
+https://en.wikipedia.org/wiki/Microsoft_Compiled_HTML_Help[CHM Help^,title="Wikipedia page on Microsoft Compiled HTML Help"]
+files are perfect because they are compact (compressed) and support indexing and searching the help file.
+Nevertheless creating these files is a long and rather boring process.
+Don't worry, DocMaker will handle all the work for you (almost :-).
+
+First, you'll need to download and install the *HTML Help Workshop*, a free tool by Microsoft.
+The application is no longer available from Microsoft's website, but fortunately it's still possible to download its archived copy via the Wayback Machine (aka "`The Web Archive`", a free service by the
+https://archive.org/[Internet Archive^]):
+
+// Old Microsoft download page:
+//    https://www.microsoft.com/en-us/download/details.aspx?id=21138
+
+* link:https://web.archive.org/web/20160301123255/https://download.microsoft.com/download/0/A/9/0A939EF6-E31C-430F-A3DF-DFAE7960D564/htmlhelp.exe[`htmlhelp.exe`^,title="Donwload 'htmlhelp.exe' from the Web Archive"]
+-- *HTML Help Workshop* (3.3 MB, English Installer)
+
+Then launch DocMaker.
+A `PureBasic Help.hhp` file will be created.
+
+If you have installed *HTML Help Workshop* correctly, it will be launched when double clicking on the `PureBasic Help.hhp` file.
+Then look for the *compile* button in the toolbar and go for it -- you've just compiled your first CHM Help file, with index and menus!
+
+
+
+== PureBasic Documentation
+
+The source files of the entire PureBasic Documentation (in three different languages) are now available on GitHub, and can be recompiled using DocMaker, without any problems:
+
+* https://github.com/fantaisie-software/purebasic/tree/master/Documentation/[https://github.com/fantaisie-software/purebasic^,title="View the PureBasic Documentation sources on GitHub"]
+
+include::inc_contributing.adoc[]
+
+// EOF //
